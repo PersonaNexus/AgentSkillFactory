@@ -1,0 +1,420 @@
+"""Tests for security hardening: API key validation, LLM error handling, input validation."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from agentforge.utils import safe_filename, safe_output_path
+
+
+class TestAPIKeyValidation:
+    def test_empty_key_raises(self):
+        from agentforge.llm.client import LLMClient
+        from agentforge.config import AgentForgeConfig
+
+        old_ant = os.environ.pop("ANTHROPIC_API_KEY", None)
+        old_oai = os.environ.pop("OPENAI_API_KEY", None)
+        try:
+            empty_config = AgentForgeConfig(api_key="")
+            with patch("agentforge.config.load_config", return_value=empty_config):
+                with pytest.raises(ValueError, match="No API key found"):
+                    LLMClient()
+        finally:
+            if old_ant is not None:
+                os.environ["ANTHROPIC_API_KEY"] = old_ant
+            if old_oai is not None:
+                os.environ["OPENAI_API_KEY"] = old_oai
+
+    def test_explicit_anthropic_key_used(self):
+        from agentforge.llm.client import LLMClient
+
+        # sk-ant- prefix → Anthropic provider, default Anthropic model
+        client = LLMClient(api_key="sk-ant-test-key-123")
+        assert client.provider == "anthropic"
+        assert client.model == "claude-sonnet-4-20250514"
+
+    def test_explicit_openai_key_used(self):
+        from agentforge.llm.client import LLMClient
+
+        # Non sk-ant- prefix → OpenAI provider, default OpenAI model
+        client = LLMClient(api_key="sk-test-key-123")
+        assert client.provider == "openai"
+        assert client.model == "gpt-4o"
+
+    def test_env_key_used(self):
+        from agentforge.llm.client import LLMClient
+
+        old_key = os.environ.get("ANTHROPIC_API_KEY")
+        os.environ["ANTHROPIC_API_KEY"] = "sk-ant-env-key-456"
+        try:
+            client = LLMClient()
+            assert client.provider == "anthropic"
+            assert client.model == "claude-sonnet-4-20250514"
+        finally:
+            if old_key is not None:
+                os.environ["ANTHROPIC_API_KEY"] = old_key
+            else:
+                os.environ.pop("ANTHROPIC_API_KEY", None)
+
+    def test_openai_env_key_used(self):
+        from agentforge.llm.client import LLMClient
+
+        old_ant = os.environ.pop("ANTHROPIC_API_KEY", None)
+        old_oai = os.environ.get("OPENAI_API_KEY")
+        os.environ["OPENAI_API_KEY"] = "sk-env-openai-key"
+        try:
+            client = LLMClient()
+            assert client.provider == "openai"
+            assert client.model == "gpt-4o"
+        finally:
+            if old_ant is not None:
+                os.environ["ANTHROPIC_API_KEY"] = old_ant
+            if old_oai is not None:
+                os.environ["OPENAI_API_KEY"] = old_oai
+            else:
+                os.environ.pop("OPENAI_API_KEY", None)
+
+
+class TestLLMRetry:
+    def test_retry_on_rate_limit(self):
+        import anthropic
+        from agentforge.llm.client import LLMClient
+
+        client = LLMClient(api_key="sk-ant-test", provider="anthropic")
+        mock_response = MagicMock()
+        mock_response.content = []
+
+        # Simulate rate limit then success
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.side_effect = [
+            anthropic.RateLimitError(
+                message="rate limited",
+                response=MagicMock(status_code=429, headers={}),
+                body=None,
+            ),
+            mock_response,
+        ]
+
+        with patch("agentforge.llm.client.time.sleep"):
+            result = client._call_anthropic_with_retry(model="test", messages=[], max_tokens=10)
+
+        assert result == mock_response
+        assert client._anthropic_client.messages.create.call_count == 2
+
+    def test_auth_error_raises_immediately(self):
+        import anthropic
+        from agentforge.llm.client import LLMClient
+
+        client = LLMClient(api_key="sk-ant-bad", provider="anthropic")
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.side_effect = anthropic.AuthenticationError(
+            message="invalid key",
+            response=MagicMock(status_code=401, headers={}),
+            body=None,
+        )
+
+        with pytest.raises(ValueError, match="Invalid Anthropic API key"):
+            client._call_anthropic_with_retry(model="test", messages=[], max_tokens=10)
+
+        # Should not retry on auth error
+        assert client._anthropic_client.messages.create.call_count == 1
+
+    def test_api_status_error_raises(self):
+        import anthropic
+        from agentforge.llm.client import LLMClient
+
+        client = LLMClient(api_key="sk-ant-test", provider="anthropic")
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.side_effect = anthropic.APIStatusError(
+            message="server error",
+            response=MagicMock(status_code=500, headers={}),
+            body=None,
+        )
+
+        with pytest.raises(RuntimeError, match="LLM request failed"):
+            client._call_anthropic_with_retry(model="test", messages=[], max_tokens=10)
+
+    def test_max_retries_exhausted(self):
+        import anthropic
+        from agentforge.llm.client import LLMClient
+
+        client = LLMClient(api_key="sk-ant-test", provider="anthropic")
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.side_effect = anthropic.RateLimitError(
+            message="rate limited",
+            response=MagicMock(status_code=429, headers={}),
+            body=None,
+        )
+
+        with patch("agentforge.llm.client.time.sleep"):
+            with pytest.raises(RuntimeError, match="after 3 retries"):
+                client._call_anthropic_with_retry(model="test", messages=[], max_tokens=10)
+
+
+class TestPathTraversal:
+    def test_traversal_in_agent_id(self, tmp_path):
+        """Path traversal characters should be stripped from filenames."""
+        result = safe_filename("../../../etc/passwd")
+        assert ".." not in result
+        assert "/" not in result
+
+        path = safe_output_path(tmp_path, f"{result}.yaml")
+        assert str(path).startswith(str(tmp_path.resolve()))
+
+    def test_backslash_traversal(self):
+        result = safe_filename("..\\..\\windows\\system32")
+        assert "\\" not in result
+
+    def test_safe_output_stays_in_dir(self, tmp_path):
+        path = safe_output_path(tmp_path, "normal_agent.yaml")
+        assert path.parent == tmp_path
+
+
+class TestInputValidation:
+    def test_pdf_size_limit(self, tmp_path):
+        """PDF ingestion should reject files over 50MB."""
+        from agentforge.ingestion.pdf import _MAX_PDF_SIZE_MB
+
+        # Create a file that appears large (mock stat)
+        big_file = tmp_path / "huge.pdf"
+        big_file.write_text("x")  # Just needs to exist
+
+        with patch.object(Path, "stat") as mock_stat:
+            mock_stat.return_value.st_size = (_MAX_PDF_SIZE_MB + 1) * 1024 * 1024
+            with pytest.raises(ValueError, match="too large"):
+                from agentforge.ingestion.pdf import ingest_pdf
+                ingest_pdf(big_file)
+
+    def test_culture_empty_yaml(self, tmp_path):
+        """Empty culture YAML should raise clear error."""
+        from agentforge.mapping.culture_mapper import CultureParser
+
+        empty_file = tmp_path / "empty.yaml"
+        empty_file.write_text("")
+
+        parser = CultureParser()
+        with pytest.raises(ValueError, match="empty or not a valid"):
+            parser.parse_yaml(empty_file)
+
+    def test_culture_list_yaml(self, tmp_path):
+        """Culture YAML that's a list (not mapping) should raise."""
+        from agentforge.mapping.culture_mapper import CultureParser
+
+        list_file = tmp_path / "list.yaml"
+        list_file.write_text("- item1\n- item2\n")
+
+        parser = CultureParser()
+        with pytest.raises(ValueError, match="empty or not a valid"):
+            parser.parse_yaml(list_file)
+
+    def test_text_encoding_fallback(self, tmp_path):
+        """Text ingestion should fall back to latin-1 for non-UTF-8 files."""
+        from agentforge.ingestion.text import ingest_file
+
+        # Write a file with latin-1 encoded content
+        latin_file = tmp_path / "latin.txt"
+        latin_file.write_bytes("Résumé: Senior Développeur\nExperience: 5+ years".encode("latin-1"))
+
+        jd = ingest_file(latin_file)
+        assert "Senior" in jd.raw_text
+
+
+class TestPDFIngestion:
+    def test_pdf_ingestion(self, tmp_path):
+        """Test basic PDF ingestion with a real PDF."""
+        import fitz
+
+        pdf_path = tmp_path / "test.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((72, 72), "Senior Software Engineer\n\nRequirements:\n- Python\n- 5+ years")
+        doc.save(str(pdf_path))
+        doc.close()
+
+        from agentforge.ingestion.pdf import ingest_pdf
+        jd = ingest_pdf(pdf_path)
+        assert "Software Engineer" in jd.raw_text
+        assert jd.metadata["format"] == "pdf"
+        assert jd.metadata["page_count"] == 1
+
+    def test_pdf_file_not_found(self):
+        from agentforge.ingestion.pdf import ingest_pdf
+        with pytest.raises(FileNotFoundError, match="PDF file not found"):
+            ingest_pdf("/nonexistent/file.pdf")
+
+    def test_pdf_corrupted(self, tmp_path):
+        """Corrupted PDF should raise ValueError."""
+        bad_pdf = tmp_path / "bad.pdf"
+        bad_pdf.write_text("not a pdf")
+
+        from agentforge.ingestion.pdf import ingest_pdf
+        with pytest.raises(ValueError, match="Failed to open PDF"):
+            ingest_pdf(bad_pdf)
+
+    def test_pdf_empty_content(self, tmp_path):
+        """PDF with no text should raise ValueError."""
+        import fitz
+
+        pdf_path = tmp_path / "empty.pdf"
+        doc = fitz.open()
+        doc.new_page()  # blank page
+        doc.save(str(pdf_path))
+        doc.close()
+
+        from agentforge.ingestion.pdf import ingest_pdf
+        with pytest.raises(ValueError, match="No text content"):
+            ingest_pdf(pdf_path)
+
+
+class TestExtractStructured:
+    def test_extract_structured_success(self):
+        """Test extract_structured with mocked Anthropic API response."""
+        from pydantic import BaseModel
+        from agentforge.llm.client import LLMClient
+
+        class SimpleOutput(BaseModel):
+            name: str
+            score: float
+
+        client = LLMClient(api_key="sk-ant-test", provider="anthropic")
+        mock_block = MagicMock()
+        mock_block.type = "tool_use"
+        mock_block.name = "SimpleOutput"
+        mock_block.input = {"name": "test", "score": 0.9}
+
+        mock_response = MagicMock()
+        mock_response.content = [mock_block]
+
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.return_value = mock_response
+
+        result = client.extract_structured(
+            prompt="Extract data",
+            output_schema=SimpleOutput,
+        )
+        assert result.name == "test"
+        assert result.score == 0.9
+
+    def test_extract_structured_with_system(self):
+        """Test extract_structured passes system prompt."""
+        from pydantic import BaseModel
+        from agentforge.llm.client import LLMClient
+
+        class SimpleOutput(BaseModel):
+            value: int
+
+        client = LLMClient(api_key="sk-ant-test", provider="anthropic")
+        mock_block = MagicMock()
+        mock_block.type = "tool_use"
+        mock_block.name = "SimpleOutput"
+        mock_block.input = {"value": 42}
+
+        mock_response = MagicMock()
+        mock_response.content = [mock_block]
+
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.return_value = mock_response
+
+        result = client.extract_structured(
+            prompt="Extract",
+            output_schema=SimpleOutput,
+            system="Be precise",
+        )
+        assert result.value == 42
+        call_kwargs = client._anthropic_client.messages.create.call_args.kwargs
+        assert call_kwargs["system"] == "Be precise"
+
+    def test_extract_structured_no_tool_use(self):
+        """Should raise if no tool use found in response."""
+        from pydantic import BaseModel
+        from agentforge.llm.client import LLMClient
+
+        class Dummy(BaseModel):
+            x: int
+
+        client = LLMClient(api_key="sk-ant-test", provider="anthropic")
+        mock_block = MagicMock()
+        mock_block.type = "text"
+
+        mock_response = MagicMock()
+        mock_response.content = [mock_block]
+
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.return_value = mock_response
+
+        with pytest.raises(ValueError, match="No Dummy tool use found"):
+            client.extract_structured(prompt="test", output_schema=Dummy)
+
+    def test_extract_structured_openai_success(self):
+        """Test extract_structured with mocked OpenAI API response."""
+        from pydantic import BaseModel
+        from agentforge.llm.client import LLMClient
+
+        class SimpleOutput(BaseModel):
+            name: str
+            score: float
+
+        client = LLMClient(api_key="sk-test-key", provider="openai")
+
+        mock_func = MagicMock()
+        mock_func.arguments = '{"name": "test", "score": 0.9}'
+        mock_tool_call = MagicMock()
+        mock_tool_call.function = mock_func
+        mock_choice = MagicMock()
+        mock_choice.message.tool_calls = [mock_tool_call]
+        mock_response = MagicMock()
+        mock_response.choices = [mock_choice]
+
+        client._openai_client = MagicMock()
+        client._openai_client.chat.completions.create.return_value = mock_response
+
+        result = client.extract_structured(
+            prompt="Extract data",
+            output_schema=SimpleOutput,
+        )
+        assert result.name == "test"
+        assert result.score == 0.9
+
+    def test_connection_error_retry(self):
+        """Connection errors should be retried."""
+        import anthropic
+        from agentforge.llm.client import LLMClient
+
+        client = LLMClient(api_key="sk-ant-test", provider="anthropic")
+        mock_response = MagicMock()
+        mock_response.content = []
+
+        client._anthropic_client = MagicMock()
+        client._anthropic_client.messages.create.side_effect = [
+            anthropic.APIConnectionError(request=MagicMock()),
+            mock_response,
+        ]
+
+        with patch("agentforge.llm.client.time.sleep"):
+            result = client._call_anthropic_with_retry(model="test", messages=[], max_tokens=10)
+
+        assert result == mock_response
+        assert client._anthropic_client.messages.create.call_count == 2
+
+    def test_config_fallback_for_api_key(self):
+        """LLMClient should fall back to config file for API key."""
+        from agentforge.llm.client import LLMClient
+        from agentforge.config import AgentForgeConfig
+
+        old_ant = os.environ.pop("ANTHROPIC_API_KEY", None)
+        old_oai = os.environ.pop("OPENAI_API_KEY", None)
+        try:
+            mock_config = AgentForgeConfig(api_key="sk-ant-from-config")
+            with patch("agentforge.config.load_config", return_value=mock_config):
+                client = LLMClient()
+                assert client.provider == "anthropic"
+                assert client.model == "claude-sonnet-4-20250514"
+        finally:
+            if old_ant is not None:
+                os.environ["ANTHROPIC_API_KEY"] = old_ant
+            if old_oai is not None:
+                os.environ["OPENAI_API_KEY"] = old_oai

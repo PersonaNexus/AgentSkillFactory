@@ -1,0 +1,30 @@
+# Customer Success Manager
+
+## About Us
+CloudScale SaaS helps mid-market companies manage their cloud infrastructure efficiently.
+
+## The Role
+As a Customer Success Manager, you will be the primary point of contact for our enterprise customers, ensuring they achieve maximum value from our platform. You'll drive adoption, retention, and expansion across your book of business.
+
+## What You'll Do
+- Manage a portfolio of 30-40 enterprise accounts ($500K+ ARR)
+- Conduct quarterly business reviews and health check assessments
+- Develop and execute customer success plans aligned with client goals
+- Identify upsell and cross-sell opportunities through deep product knowledge
+- Coordinate with engineering, product, and support teams to resolve customer issues
+- Build executive-level relationships and act as a trusted advisor
+- Analyze product usage data to proactively identify at-risk accounts
+- Create customer-facing content including best practices guides and case studies
+
+## What We're Looking For
+- 3-5 years in customer success, account management, or consulting
+- Excellent communication and presentation skills
+- Analytical mindset with experience using CRM tools (Salesforce, Gainsight)
+- Ability to manage multiple stakeholders and complex relationships
+- Strong empathy and active listening skills
+- Experience with SaaS or cloud technology products
+
+## Nice to Have
+- Experience with cloud infrastructure (AWS, Azure, GCP)
+- Project management certification (PMP, CSM)
+- Previous experience at a high-growth startup

@@ -1,0 +1,540 @@
+/* AgentForge Web UI — Frontend Logic */
+
+// ========== TAB ROUTING ==========
+function showTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.hidden = true);
+    document.querySelectorAll('.nav-link').forEach(el => el.removeAttribute('aria-current'));
+    const tab = document.getElementById('tab-' + name);
+    if (tab) {
+        tab.hidden = false;
+        const link = document.querySelector(`.nav-link[data-tab="${name}"]`);
+        if (link) link.setAttribute('aria-current', 'page');
+    }
+}
+
+window.addEventListener('hashchange', () => {
+    const hash = location.hash.slice(1) || 'extract';
+    showTab(hash);
+});
+
+// ========== RENDERING HELPERS ==========
+function renderRolePanel(role) {
+    return `<div class="panel panel-blue">
+        <div class="panel-title">Role</div>
+        <strong>${esc(role.title)}</strong> (${esc(role.seniority)})<br>
+        <small>Domain: ${esc(role.domain)} &mdash; ${esc(role.purpose)}</small>
+    </div>`;
+}
+
+function renderSkillsTable(skills) {
+    if (!skills || !skills.length) return '';
+    const rows = skills.map(s => `<tr>
+        <td>${esc(s.name)}</td>
+        <td><span class="cat-${s.category}">${esc(s.category)}</span></td>
+        <td>${esc(s.proficiency)}</td>
+        <td>${esc(s.importance)}</td>
+        <td><small>${esc(s.context || '')}</small></td>
+    </tr>`).join('');
+    return `<table>
+        <thead><tr><th>Skill</th><th>Category</th><th>Proficiency</th><th>Importance</th><th>Context</th></tr></thead>
+        <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function renderTraitBars(traits) {
+    if (!traits || typeof traits !== 'object') return '';
+    const entries = Object.entries(traits).filter(([, v]) => v != null).sort((a, b) => a[0].localeCompare(b[0]));
+    if (!entries.length) return '';
+    const bars = entries.map(([name, value]) => {
+        const pct = Math.round(value * 100);
+        return `<div class="trait-bar-container">
+            <span class="trait-bar-label">${esc(name)}</span>
+            <div class="trait-bar-track"><div class="trait-bar-fill" style="width:${pct}%"></div></div>
+            <span class="trait-bar-value">${pct}%</span>
+        </div>`;
+    }).join('');
+    return `<div class="panel"><div class="panel-title">Personality Traits</div>${bars}</div>`;
+}
+
+function renderSuggestedTraits(suggested) {
+    if (!suggested) return '';
+    const traits = {};
+    for (const [k, v] of Object.entries(suggested)) {
+        if (v != null && typeof v === 'number') traits[k] = v;
+    }
+    return renderTraitBars(traits);
+}
+
+function renderAutomation(potential, rationale) {
+    const pct = Math.round((potential || 0) * 100);
+    const cls = pct < 30 ? 'auto-low' : pct < 60 ? 'auto-mid' : 'auto-high';
+    return `<div class="panel ${cls}">
+        <div class="panel-title">Automation Assessment</div>
+        <strong>${pct}%</strong> automation potential<br>
+        <small>${esc(rationale || '')}</small>
+    </div>`;
+}
+
+function renderGapAnalysis(score, gaps) {
+    if (score == null) return '';
+    const pct = Math.round(score * 100);
+    const cls = pct > 70 ? 'coverage-high' : pct > 50 ? 'coverage-mid' : 'coverage-low';
+    const gapList = (gaps || []).slice(0, 8).map(g => `<li>${esc(g)}</li>`).join('');
+    const more = (gaps || []).length > 8 ? `<li><em>...and ${gaps.length - 8} more</em></li>` : '';
+    return `<div class="panel panel-${pct > 70 ? 'green' : pct > 50 ? 'yellow' : 'red'}">
+        <div class="panel-title">Gap Analysis</div>
+        <span class="coverage-badge ${cls}">${pct}%</span> coverage
+        ${gapList || more ? `<ul>${gapList}${more}</ul>` : ''}
+    </div>`;
+}
+
+function renderSkillScores(scores) {
+    if (!scores || !scores.length) return '';
+    const rows = scores.map(s => `<tr>
+        <td>${esc(s.skill)}</td>
+        <td>${Math.round(s.score * 100)}%</td>
+        <td><span class="priority-${s.priority}">${esc(s.priority)}</span></td>
+    </tr>`).join('');
+    return `<h4>Skill-by-Skill Coverage</h4>
+    <table><thead><tr><th>Skill</th><th>Score</th><th>Priority</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function renderExtractionResult(data) {
+    return renderRolePanel(data.role)
+        + renderSkillsTable(data.skills)
+        + renderSuggestedTraits(data.suggested_traits)
+        + renderAutomation(data.automation_potential, data.automation_rationale);
+}
+
+function renderCultureProfile(profile) {
+    const values = (profile.values || []).map(v => {
+        const deltas = Object.entries(v.trait_deltas || {})
+            .map(([k, d]) => `${k}: ${d > 0 ? '+' : ''}${d.toFixed(2)}`).join(', ');
+        return `<li><strong>${esc(v.name)}</strong>: ${esc(v.description)}
+            ${deltas ? `<br><small>Trait deltas: ${esc(deltas)}</small>` : ''}</li>`;
+    }).join('');
+    return `<div class="panel panel-blue">
+        <div class="panel-title">Culture Profile</div>
+        <strong>${esc(profile.name)}</strong><br>
+        <small>${esc(profile.description || '')}</small><br>
+        <small>Tone: ${esc(profile.communication_tone || 'N/A')} &mdash;
+        Decision: ${esc(profile.decision_style || 'N/A')}</small>
+        <ul>${values}</ul>
+    </div>`;
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+// ========== EXTRACT ==========
+let _lastExtractResult = null;
+let _lastForgeResult = null;
+
+function downloadFile(content, filename, mimeType) {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+}
+
+function jsonToYaml(obj, indent) {
+    indent = indent || 0;
+    const pad = '  '.repeat(indent);
+    if (obj === null || obj === undefined) return pad + 'null';
+    if (typeof obj === 'string') return obj.includes('\n') ? `|\n${obj.split('\n').map(l => pad + '  ' + l).join('\n')}` : `"${obj}"`;
+    if (typeof obj === 'number' || typeof obj === 'boolean') return String(obj);
+    if (Array.isArray(obj)) return obj.map(item => pad + '- ' + (typeof item === 'object' && item !== null ? '\n' + jsonToYaml(item, indent + 2).replace(/^\s+/, '') : jsonToYaml(item, 0))).join('\n');
+    if (typeof obj === 'object') return Object.entries(obj).filter(([,v]) => v !== null).map(([k, v]) => {
+        const valStr = jsonToYaml(v, indent + 1);
+        return typeof v === 'object' && v !== null ? `${pad}${k}:\n${valStr}` : `${pad}${k}: ${valStr}`;
+    }).join('\n');
+    return String(obj);
+}
+
+function renderDownloadBar(prefix) {
+    prefix = prefix || 'Extract';
+    const tag = prefix.toLowerCase();
+    return `<div class="download-bar" style="margin-bottom:1rem;display:flex;gap:0.5rem;">
+        <button class="secondary outline" onclick="_download${prefix}JSON()">Download JSON</button>
+        <button class="secondary outline" onclick="_download${prefix}YAML()">Download YAML</button>
+    </div>`;
+}
+
+// Extract page downloads
+window._downloadExtractJSON = function() {
+    if (!_lastExtractResult) return;
+    const name = (_lastExtractResult.role?.title || 'extraction').replace(/\s+/g, '_').toLowerCase();
+    downloadFile(JSON.stringify(_lastExtractResult, null, 2), `${name}_extraction.json`, 'application/json');
+};
+
+window._downloadExtractYAML = function() {
+    if (!_lastExtractResult) return;
+    const name = (_lastExtractResult.role?.title || 'extraction').replace(/\s+/g, '_').toLowerCase();
+    downloadFile(jsonToYaml(_lastExtractResult), `${name}_extraction.yaml`, 'text/yaml');
+};
+
+// Forge page downloads (full pipeline result)
+window._downloadForgeJSON = function() {
+    if (!_lastForgeResult) return;
+    const name = (_lastForgeResult.blueprint?.extraction?.role?.title || 'forge').replace(/\s+/g, '_').toLowerCase();
+    downloadFile(JSON.stringify(_lastForgeResult, null, 2), `${name}_forge_result.json`, 'application/json');
+};
+
+window._downloadForgeYAML = function() {
+    if (!_lastForgeResult) return;
+    const name = (_lastForgeResult.blueprint?.extraction?.role?.title || 'forge').replace(/\s+/g, '_').toLowerCase();
+    downloadFile(jsonToYaml(_lastForgeResult), `${name}_forge_result.yaml`, 'text/yaml');
+};
+
+document.getElementById('extract-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('extract-btn');
+    const results = document.getElementById('extract-results');
+    btn.setAttribute('aria-busy', 'true');
+    btn.disabled = true;
+    results.hidden = true;
+    _lastExtractResult = null;
+
+    const formData = new FormData(e.target);
+    try {
+        const resp = await fetch('/api/extract', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (!resp.ok) {
+            results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(data.detail || 'Unknown error')}</div>`;
+        } else {
+            _lastExtractResult = data;
+            results.innerHTML = renderDownloadBar('Extract') + renderExtractionResult(data);
+        }
+        results.hidden = false;
+    } catch (err) {
+        results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(err.message)}</div>`;
+        results.hidden = false;
+    } finally {
+        btn.removeAttribute('aria-busy');
+        btn.disabled = false;
+    }
+});
+
+// ========== FORGE ==========
+const FORGE_STAGES = ['ingest', 'extract', 'map', 'culture', 'generate', 'analyze', 'deep_analyze'];
+const FORGE_STAGE_LABELS = {
+    ingest: 'Parse File', extract: 'Extract Skills', map: 'Map Traits',
+    culture: 'Apply Culture', generate: 'Generate Identity', analyze: 'Gap Analysis',
+    deep_analyze: 'Deep Analysis'
+};
+
+function initForgeStages(mode) {
+    const container = document.getElementById('forge-stages');
+    let stages = ['ingest', 'extract'];
+    if (mode === 'default') stages.push('map', 'culture', 'generate', 'analyze');
+    else if (mode === 'deep') stages.push('map', 'culture', 'generate', 'deep_analyze');
+    else stages.push('generate');
+
+    container.innerHTML = stages.map(s =>
+        `<div class="stage-item stage-pending" id="stage-${s}">
+            <span class="stage-icon">&#9675;</span>
+            <span>${FORGE_STAGE_LABELS[s] || s}</span>
+        </div>`
+    ).join('');
+}
+
+function updateForgeStage(stage) {
+    // Mark previous active as done
+    document.querySelectorAll('.stage-item.stage-active').forEach(el => {
+        el.classList.remove('stage-active');
+        el.classList.add('stage-done');
+        el.querySelector('.stage-icon').innerHTML = '&#10003;';
+    });
+    // Mark current as active
+    const el = document.getElementById('stage-' + stage);
+    if (el) {
+        el.classList.remove('stage-pending');
+        el.classList.add('stage-active');
+        el.querySelector('.stage-icon').innerHTML = '&#8635;';
+    }
+}
+
+function completeAllStages() {
+    document.querySelectorAll('.stage-item.stage-active').forEach(el => {
+        el.classList.remove('stage-active');
+        el.classList.add('stage-done');
+        el.querySelector('.stage-icon').innerHTML = '&#10003;';
+    });
+}
+
+document.getElementById('forge-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('forge-btn');
+    const progress = document.getElementById('forge-progress');
+    const results = document.getElementById('forge-results');
+    btn.setAttribute('aria-busy', 'true');
+    btn.disabled = true;
+    results.hidden = true;
+
+    const formData = new FormData(e.target);
+    const mode = formData.get('mode');
+    initForgeStages(mode);
+    progress.hidden = false;
+
+    try {
+        const resp = await fetch('/api/forge', { method: 'POST', body: formData });
+        const { job_id } = await resp.json();
+        if (!resp.ok) throw new Error('Failed to start forge job');
+
+        // Connect SSE
+        const es = new EventSource(`/api/forge/${job_id}/stream`);
+        es.onmessage = (evt) => {
+            const data = JSON.parse(evt.data);
+            if (data.event === 'stage') {
+                updateForgeStage(data.stage);
+            } else if (data.event === 'done') {
+                completeAllStages();
+                es.close();
+                _lastForgeResult = data;
+                const bp = data.blueprint;
+                let html = renderDownloadBar('Forge');
+                html += renderExtractionResult(bp.extraction);
+                if (data.traits) html += renderTraitBars(data.traits);
+                html += renderGapAnalysis(data.coverage_score, data.coverage_gaps);
+                if (data.skill_scores) html += renderSkillScores(data.skill_scores);
+
+                // Identity file downloads
+                html += `<div class="download-row" style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+                    <a href="/api/forge/${job_id}/download/yaml" role="button" class="outline">Download Identity YAML</a>
+                    ${data.skill_file ? `<a href="/api/forge/${job_id}/download/skill" role="button" class="outline">Download SKILL.md</a>` : ''}
+                    ${data.skill_folder ? `<a href="/api/forge/${job_id}/download/skill-folder" role="button" class="outline">Download Skill Folder (ZIP)</a>` : ''}
+                </div>`;
+
+                // Blueprint summary
+                html += `<div class="panel panel-green">
+                    <div class="panel-title">Agent Forged Successfully</div>
+                    <strong>${esc(bp.extraction.role.title)}</strong> &mdash;
+                    Skills: ${bp.extraction.skills.length} |
+                    Coverage: ${Math.round(bp.coverage_score * 100)}% |
+                    Automation: ${Math.round(bp.automation_estimate * 100)}%
+                </div>`;
+
+                results.innerHTML = html;
+                results.hidden = false;
+                btn.removeAttribute('aria-busy');
+                btn.disabled = false;
+            } else if (data.event === 'error') {
+                es.close();
+                results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Pipeline Error</div>${esc(data.message)}</div>`;
+                results.hidden = false;
+                btn.removeAttribute('aria-busy');
+                btn.disabled = false;
+            }
+        };
+        es.onerror = () => {
+            es.close();
+            btn.removeAttribute('aria-busy');
+            btn.disabled = false;
+        };
+    } catch (err) {
+        results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(err.message)}</div>`;
+        results.hidden = false;
+        btn.removeAttribute('aria-busy');
+        btn.disabled = false;
+    }
+});
+
+// ========== BATCH ==========
+document.getElementById('batch-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('batch-btn');
+    const progress = document.getElementById('batch-progress');
+    const bar = document.getElementById('batch-bar');
+    const status = document.getElementById('batch-status');
+    const results = document.getElementById('batch-results');
+    btn.setAttribute('aria-busy', 'true');
+    btn.disabled = true;
+    results.hidden = true;
+    progress.hidden = false;
+    bar.value = 0;
+
+    const formData = new FormData(e.target);
+    try {
+        const resp = await fetch('/api/batch', { method: 'POST', body: formData });
+        const { job_id } = await resp.json();
+        if (!resp.ok) throw new Error('Failed to start batch job');
+
+        const es = new EventSource(`/api/batch/${job_id}/stream`);
+        es.onmessage = (evt) => {
+            const data = JSON.parse(evt.data);
+            if (data.event === 'progress') {
+                const pct = data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0;
+                bar.value = pct;
+                bar.max = 100;
+                status.textContent = `Processing ${data.file} (${data.completed}/${data.total})...`;
+            } else if (data.event === 'done') {
+                es.close();
+                bar.value = 100;
+                status.textContent = 'Complete!';
+
+                const res = data.results || [];
+                const rows = res.map(r => `<tr>
+                    <td>${esc(r.file)}</td>
+                    <td>${r.success ? '<span class="badge-ok">OK</span>' : '<span class="badge-fail">FAIL</span>'}</td>
+                    <td>${esc(r.agent_title || r.error || '-')}</td>
+                    <td>${r.skills_count != null ? r.skills_count : '-'}</td>
+                    <td>${r.coverage != null ? r.coverage + '%' : '-'}</td>
+                    <td>${r.duration}s</td>
+                </tr>`).join('');
+
+                const succeeded = res.filter(r => r.success).length;
+                const failed = res.length - succeeded;
+                let html = `<table>
+                    <thead><tr><th>File</th><th>Status</th><th>Agent</th><th>Skills</th><th>Coverage</th><th>Time</th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                <p><strong>Summary:</strong> ${succeeded} succeeded, ${failed} failed, ${res.length} total</p>`;
+
+                if (Object.keys(data.files || {}).length > 0) {
+                    html += `<a href="/api/batch/${job_id}/download/zip" role="button" class="outline">Download All (ZIP)</a>`;
+                }
+
+                results.innerHTML = html;
+                results.hidden = false;
+                btn.removeAttribute('aria-busy');
+                btn.disabled = false;
+            } else if (data.event === 'error') {
+                es.close();
+                results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Batch Error</div>${esc(data.message)}</div>`;
+                results.hidden = false;
+                btn.removeAttribute('aria-busy');
+                btn.disabled = false;
+            }
+        };
+    } catch (err) {
+        results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(err.message)}</div>`;
+        results.hidden = false;
+        btn.removeAttribute('aria-busy');
+        btn.disabled = false;
+    }
+});
+
+// ========== CULTURE ==========
+async function loadCultureTemplates() {
+    try {
+        const resp = await fetch('/api/culture/list');
+        const templates = await resp.json();
+        const container = document.getElementById('culture-templates');
+        container.innerHTML = templates.map(t => `<article>
+            <header>${esc(t.display_name)}</header>
+            <p>${esc(t.description)}</p>
+            <small>${t.value_count} values</small>
+            <footer><details><summary>View YAML</summary><pre class="yaml-preview">${esc(t.yaml)}</pre></details></footer>
+        </article>`).join('');
+    } catch (err) {
+        console.error('Failed to load culture templates:', err);
+    }
+}
+
+document.getElementById('culture-parse-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const results = document.getElementById('culture-parse-results');
+    const formData = new FormData(e.target);
+    try {
+        const resp = await fetch('/api/culture/parse', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (!resp.ok) {
+            results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(data.detail)}</div>`;
+        } else {
+            results.innerHTML = renderCultureProfile(data);
+        }
+        results.hidden = false;
+    } catch (err) {
+        results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(err.message)}</div>`;
+        results.hidden = false;
+    }
+});
+
+document.getElementById('culture-mixin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const results = document.getElementById('culture-mixin-results');
+    const formData = new FormData(e.target);
+    try {
+        const resp = await fetch('/api/culture/to-mixin', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (!resp.ok) {
+            results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(data.detail)}</div>`;
+        } else {
+            results.innerHTML = `<div class="panel panel-green">
+                <div class="panel-title">PersonaNexus Mixin</div>
+                <pre class="yaml-preview">${esc(data.mixin_yaml)}</pre>
+            </div>`;
+        }
+        results.hidden = false;
+    } catch (err) {
+        results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(err.message)}</div>`;
+        results.hidden = false;
+    }
+});
+
+// ========== SETTINGS ==========
+async function loadSettings() {
+    try {
+        const resp = await fetch('/api/settings');
+        const data = await resp.json();
+        const form = document.getElementById('settings-form');
+        form.elements.api_key.placeholder = data.api_key || 'sk-ant-...';
+        form.elements.default_model.value = data.default_model;
+        form.elements.output_dir.value = data.output_dir;
+        form.elements.batch_parallel.value = data.batch_parallel;
+    } catch (err) {
+        console.error('Failed to load settings:', err);
+    }
+}
+
+document.getElementById('settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const body = {
+        api_key: form.elements.api_key.value,
+        default_model: form.elements.default_model.value,
+        output_dir: form.elements.output_dir.value,
+        batch_parallel: parseInt(form.elements.batch_parallel.value) || 1,
+    };
+    try {
+        const resp = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        document.getElementById('settings-status').innerHTML = data.saved
+            ? '<p style="color:#22c55e">Settings saved successfully.</p>'
+            : '<p style="color:#ef4444">Failed to save settings.</p>';
+    } catch (err) {
+        document.getElementById('settings-status').innerHTML = `<p style="color:#ef4444">${esc(err.message)}</p>`;
+    }
+});
+
+document.getElementById('validate-key-btn').addEventListener('click', async () => {
+    const key = document.getElementById('settings-form').elements.api_key.value;
+    const status = document.getElementById('key-status');
+    status.innerHTML = '<span class="spinner"></span>';
+    try {
+        const resp = await fetch('/api/settings/validate-key', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: key }),
+        });
+        const data = await resp.json();
+        status.innerHTML = data.valid
+            ? '<small style="color:#22c55e">Valid</small>'
+            : `<small style="color:#ef4444">Invalid: ${esc(data.error)}</small>`;
+    } catch (err) {
+        status.innerHTML = `<small style="color:#ef4444">${esc(err.message)}</small>`;
+    }
+});
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', () => {
+    const hash = location.hash.slice(1) || 'extract';
+    showTab(hash);
+    loadCultureTemplates();
+    loadSettings();
+});

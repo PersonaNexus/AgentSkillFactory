@@ -1,0 +1,33 @@
+name: "Innovative Startup"
+description: "Fast-paced, innovation-driven startup culture emphasizing speed, creativity, and ownership"
+values:
+  - name: "Move Fast"
+    description: "Prioritize speed and iteration over perfection"
+    behavioral_indicators:
+      - "Ship MVPs quickly and iterate based on feedback"
+      - "Make decisions with 80% confidence rather than waiting for 100%"
+      - "Bias toward action over analysis paralysis"
+    trait_deltas:
+      assertiveness: 0.15
+      directness: 0.1
+      patience: -0.1
+  - name: "Innovation First"
+    description: "Challenge conventions and seek creative solutions"
+    behavioral_indicators:
+      - "Question existing approaches before accepting them"
+      - "Propose unconventional solutions"
+      - "Experiment and learn from failures"
+    trait_deltas:
+      creativity: 0.2
+      epistemic_humility: 0.1
+  - name: "Radical Transparency"
+    description: "Share information openly and communicate directly"
+    behavioral_indicators:
+      - "Give honest, constructive feedback"
+      - "Share context and reasoning behind decisions"
+      - "Address issues directly rather than avoiding them"
+    trait_deltas:
+      directness: 0.15
+      warmth: -0.05
+communication_tone: "direct, energetic, and informal"
+decision_style: "fast consensus with strong owner"

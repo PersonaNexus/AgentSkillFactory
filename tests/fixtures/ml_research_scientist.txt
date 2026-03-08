@@ -1,0 +1,31 @@
+# Machine Learning Research Scientist
+
+DeepMind Labs | London, UK (On-site)
+
+## Overview
+
+Join our research team to push the boundaries of machine learning and artificial intelligence. You will conduct original research, publish papers at top venues, and develop novel algorithms that impact millions of users.
+
+## Key Responsibilities
+
+- Conduct cutting-edge research in deep learning, reinforcement learning, or natural language processing
+- Design and run large-scale experiments on GPU/TPU clusters
+- Publish research at top conferences (NeurIPS, ICML, ICLR, ACL)
+- Collaborate with cross-functional teams to transition research into production
+- Mentor PhD interns and junior researchers
+- Present findings at internal and external seminars
+
+## Required Qualifications
+
+- PhD in Computer Science, Machine Learning, Statistics, or related field
+- Strong publication record at top ML/AI venues
+- Expert-level proficiency in Python, PyTorch or JAX
+- Deep understanding of optimization, probability theory, and linear algebra
+- Experience with distributed computing and large-scale training
+
+## Preferred
+
+- Experience with large language models or generative AI
+- Background in theoretical computer science or mathematics
+- Open-source contributions to ML frameworks
+- Experience with scientific computing (NumPy, SciPy)
