@@ -59,7 +59,8 @@ class TestSkillMdFrontmatter:
         generator = SkillFolderGenerator()
         result = generator.generate(sample_extraction, sample_identity)
 
-        assert "description: Design, build, and maintain scalable data" in result.skill_md
+        assert "description:" in result.skill_md
+        assert "Design, build, and maintain scalable data" in result.skill_md
 
     def test_frontmatter_has_allowed_tools(self, sample_extraction, sample_identity):
         generator = SkillFolderGenerator()

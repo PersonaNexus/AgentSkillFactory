@@ -1,18 +1,21 @@
 """Generate Claude Code-compatible skill folders from extraction results.
 
 Produces a skill folder containing a single SKILL.md file with YAML
-frontmatter (name, description, allowed-tools) followed by markdown
-instructions — the exact format Claude Code expects for drag-and-drop
-skill installation.
+frontmatter and markdown instructions — the exact format Claude Code
+expects for drag-and-drop skill installation into .claude/skills/.
 
-Claude Code skill spec:
-    <skill-name>/
+Claude Code skill spec reference:
+    .claude/skills/<skill-name>/
     └── SKILL.md   ← YAML frontmatter + markdown body
+
+Frontmatter fields (per Anthropic docs):
+    name, description, argument-hint, allowed-tools,
+    user-invocable, disable-model-invocation
 """
 
 from __future__ import annotations
 
-import json
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -42,6 +45,9 @@ class SkillFolderGenerator:
 
     Produces a single SKILL.md with YAML frontmatter metadata and markdown
     instructions, matching the Claude Code skill specification.
+
+    Output is kept under 500 lines per Anthropic guidelines — heavy
+    reference material belongs in supporting files, not the skill itself.
     """
 
     def generate(
@@ -75,11 +81,13 @@ class SkillFolderGenerator:
         """Derive a Claude Code skill slug from the role title.
 
         Produces lowercase-hyphenated names like 'senior-data-engineer'.
+        Max 64 chars per Anthropic spec.
         """
         raw = safe_filename(extraction.role.title).lower().replace("_", "-")
-        # Collapse multiple hyphens
-        import re
         raw = re.sub(r"-+", "-", raw).strip("-")
+        # Enforce 64-char limit per spec
+        if len(raw) > 64:
+            raw = raw[:64].rstrip("-")
         return raw or "generated-skill"
 
     # ------------------------------------------------------------------
@@ -110,28 +118,95 @@ class SkillFolderGenerator:
         extraction: ExtractionResult,
         skill_name: str,
     ) -> None:
-        """Render YAML frontmatter block."""
-        # Build description from purpose, truncated for frontmatter
-        description = extraction.role.purpose
-        if len(description) > 200:
-            description = description[:197] + "..."
+        """Render YAML frontmatter block per Anthropic skill spec.
+
+        Fields: name, description, argument-hint, allowed-tools.
+        Description uses action verbs and specific keywords so Claude
+        knows when to auto-invoke the skill.
+        """
+        # Build a description with action verbs and domain keywords
+        # (Anthropic best practice: include when-to-use context)
+        description = self._build_description(extraction)
 
         lines.append("---")
         lines.append(f"name: {skill_name}")
-        lines.append(f"description: {description}")
+        lines.append(f"description: \"{description}\"")
 
-        # Build trigger hint from primary scope
+        # argument-hint from primary scope (helps autocomplete)
         if extraction.role.scope_primary:
             hint = extraction.role.scope_primary[0]
             if len(hint) > 60:
                 hint = hint[:57] + "..."
             lines.append(f"argument-hint: \"[{hint}]\"")
 
-        # Default allowed tools for Claude Code
-        lines.append("allowed-tools: Read, Grep, Glob, Bash, Write, Edit")
+        # Allowed tools — scope to what the role actually needs
+        allowed = self._derive_allowed_tools(extraction)
+        lines.append(f"allowed-tools: {', '.join(allowed)}")
 
         lines.append("---")
         lines.append("")
+
+    def _build_description(self, extraction: ExtractionResult) -> str:
+        """Build a rich description with action verbs and keywords.
+
+        Anthropic guidance: include keywords users naturally say so
+        Claude knows when to auto-invoke. Max ~200 chars.
+        """
+        purpose = extraction.role.purpose
+        # Prepend trigger context from responsibilities if available
+        if extraction.responsibilities:
+            verbs = []
+            for resp in extraction.responsibilities[:3]:
+                # Extract the leading verb phrase
+                first_word = resp.split()[0].lower() if resp.split() else ""
+                if first_word and first_word not in verbs:
+                    verbs.append(first_word)
+            if verbs:
+                trigger_hint = (
+                    f"Use when asked to {', '.join(verbs)} in "
+                    f"{extraction.role.domain}. "
+                )
+                purpose = trigger_hint + purpose
+
+        if len(purpose) > 200:
+            purpose = purpose[:197] + "..."
+        # Escape quotes for YAML
+        return purpose.replace('"', '\\"')
+
+    def _derive_allowed_tools(self, extraction: ExtractionResult) -> list[str]:
+        """Derive appropriate allowed-tools based on the role's skills.
+
+        Roles with tool/platform skills get Bash access; read-heavy
+        analytical roles may only need Read, Grep, Glob.
+        """
+        # Base tools everyone gets
+        tools = ["Read", "Grep", "Glob"]
+
+        tool_skills = [
+            s for s in extraction.skills if s.category == SkillCategory.TOOL
+        ]
+        hard_skills = [
+            s for s in extraction.skills if s.category == SkillCategory.HARD
+        ]
+
+        # If the role works with tools/platforms, grant write + bash
+        if tool_skills or any(
+            kw in extraction.role.domain.lower()
+            for kw in ("engineering", "devops", "development", "infrastructure")
+        ):
+            tools.extend(["Bash", "Write", "Edit"])
+        elif hard_skills:
+            # Technical but not necessarily hands-on tooling
+            tools.extend(["Write", "Edit"])
+
+        # Deduplicate while preserving order
+        seen: set[str] = set()
+        unique: list[str] = []
+        for t in tools:
+            if t not in seen:
+                seen.add(t)
+                unique.append(t)
+        return unique
 
     def _render_body(
         self,
@@ -140,7 +215,10 @@ class SkillFolderGenerator:
         identity: Any,
         jd: JobDescription | None,
     ) -> None:
-        """Render the markdown body (instructions for Claude)."""
+        """Render the markdown body (instructions for Claude).
+
+        Kept focused and under 500 lines per Anthropic guidelines.
+        """
         self._render_header(lines, extraction)
         self._render_identity(lines, extraction)
         self._render_triggers(lines, extraction)
@@ -148,6 +226,7 @@ class SkillFolderGenerator:
         self._render_workflows(lines, extraction)
         self._render_scope(lines, extraction)
         self._render_audience(lines, extraction)
+        self._render_arguments_usage(lines)
         self._render_footer(lines, extraction, jd)
 
     def _render_header(
@@ -231,7 +310,11 @@ class SkillFolderGenerator:
     def _render_triggers(
         self, lines: list[str], extraction: ExtractionResult
     ) -> None:
-        """Render trigger patterns from scope and responsibilities."""
+        """Render trigger patterns from scope and responsibilities.
+
+        These help Claude decide when to auto-invoke the skill —
+        Anthropic recommends including action verbs and specific keywords.
+        """
         triggers: list[str] = list(extraction.role.scope_primary)
 
         for resp in extraction.responsibilities[:3]:
@@ -394,6 +477,28 @@ class SkillFolderGenerator:
         lines.append("")
         for audience in extraction.role.audience:
             lines.append(f"- {audience}")
+        lines.append("")
+
+    def _render_arguments_usage(self, lines: list[str]) -> None:
+        """Render $ARGUMENTS usage hint.
+
+        Anthropic skills support $ARGUMENTS substitution — inform the
+        user that the skill accepts arguments for focused tasks.
+        """
+        lines.append("## Usage")
+        lines.append("")
+        lines.append(
+            "This skill accepts optional arguments via `$ARGUMENTS` to "
+            "focus on a specific task or area. For example:"
+        )
+        lines.append("")
+        lines.append("- `/<skill-name> review the authentication module`")
+        lines.append("- `/<skill-name> draft a migration plan for the database`")
+        lines.append("")
+        lines.append(
+            "When arguments are provided, focus your response on "
+            "the specified topic while applying the competencies above."
+        )
         lines.append("")
 
     def _render_footer(

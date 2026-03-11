@@ -703,11 +703,23 @@ document.getElementById('forge-form').addEventListener('submit', async (e) => {
                 html += renderGapAnalysis(data.coverage_score, data.coverage_gaps);
                 if (data.skill_scores) html += renderSkillScores(data.skill_scores);
 
-                // Identity file downloads
-                html += `<div class="download-row" style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
-                    <a href="/api/forge/${job_id}/download/yaml" role="button" class="outline">Download Identity YAML</a>
-                    ${data.skill_file ? `<a href="/api/forge/${job_id}/download/skill" role="button" class="outline">Download SKILL.md</a>` : ''}
-                    ${data.skill_folder ? `<a href="/api/forge/${job_id}/download/skill-folder" role="button" class="outline">Download Skill Folder (ZIP)</a>` : ''}
+                // Output file downloads with guidance
+                html += `<div class="download-section" style="margin-top:1.5rem;">
+                    <h4 style="margin-bottom:0.5rem;">Downloads</h4>
+                    <div class="download-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:start;">
+                        <div class="download-item">
+                            <a href="/api/forge/${job_id}/download/yaml" role="button" class="outline">Identity YAML</a>
+                            <small class="download-hint">PersonaNexus agent config</small>
+                        </div>
+                        ${data.skill_folder ? `<div class="download-item">
+                            <a href="/api/forge/${job_id}/download/skill-folder" role="button" class="outline contrast">Claude Code Skill (ZIP)</a>
+                            <small class="download-hint">Drop into .claude/skills/ &mdash; ready to use</small>
+                        </div>` : ''}
+                        ${data.skill_file ? `<div class="download-item">
+                            <a href="/api/forge/${job_id}/download/skill" role="button" class="outline secondary">Full Agent Profile</a>
+                            <small class="download-hint">Detailed SKILL.md with analysis &amp; embedded data</small>
+                        </div>` : ''}
+                    </div>
                 </div>`;
 
                 // Blueprint summary
