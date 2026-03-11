@@ -83,6 +83,20 @@ class ExtractedSkill(BaseModel):
     def coerce_category(cls, v: object) -> SkillCategory:
         return _coerce_enum(v, SkillCategory, SkillCategory.HARD)
 
+    @field_validator("context", "genai_application", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return v
+
+    @field_validator("examples", mode="before")
+    @classmethod
+    def coerce_none_examples(cls, v: object) -> list:
+        if v is None:
+            return []
+        return v
+
 
 class ExtractedRole(BaseModel):
     """Role information extracted from a job description."""
@@ -101,6 +115,25 @@ class ExtractedRole(BaseModel):
         """LLM may return None for optional list fields; coerce to empty list."""
         if v is None:
             return []
+        return v
+
+    @field_validator("seniority", mode="before")
+    @classmethod
+    def coerce_seniority(cls, v: object) -> SeniorityLevel:
+        return _coerce_enum(v, SeniorityLevel, SeniorityLevel.MID)
+
+    @field_validator("domain", mode="before")
+    @classmethod
+    def coerce_domain(cls, v: object) -> str:
+        if v is None:
+            return "general"
+        return v
+
+    @field_validator("title", "purpose", mode="before")
+    @classmethod
+    def coerce_none_to_empty_string(cls, v: object) -> str:
+        if v is None:
+            return ""
         return v
 
 
@@ -138,6 +171,13 @@ class ExtractionResult(BaseModel):
     automation_potential: float = Field(0.0, ge=0.0, le=1.0)
     automation_rationale: str = ""
 
+    salary_min: float | None = Field(
+        None, ge=0, description="Minimum annual salary if stated in the JD"
+    )
+    salary_max: float | None = Field(
+        None, ge=0, description="Maximum annual salary if stated in the JD"
+    )
+
     @field_validator("skills", "responsibilities", "qualifications", mode="before")
     @classmethod
     def coerce_none_to_list(cls, v: object) -> list:
@@ -145,9 +185,27 @@ class ExtractionResult(BaseModel):
         if v is None:
             return []
         return v
-    salary_min: float | None = Field(
-        None, ge=0, description="Minimum annual salary if stated in the JD"
-    )
-    salary_max: float | None = Field(
-        None, ge=0, description="Maximum annual salary if stated in the JD"
-    )
+
+    @field_validator("automation_potential", mode="before")
+    @classmethod
+    def coerce_none_to_zero(cls, v: object) -> float:
+        """LLM may return None for automation_potential; coerce to 0."""
+        if v is None:
+            return 0.0
+        return v
+
+    @field_validator("suggested_traits", mode="before")
+    @classmethod
+    def coerce_none_to_default_traits(cls, v: object) -> dict | SuggestedTraits:
+        """LLM may return None for suggested_traits; coerce to empty traits."""
+        if v is None:
+            return {}
+        return v
+
+    @field_validator("automation_rationale", mode="before")
+    @classmethod
+    def coerce_none_to_empty_str(cls, v: object) -> str:
+        """LLM may return None for string fields; coerce to empty string."""
+        if v is None:
+            return ""
+        return v
