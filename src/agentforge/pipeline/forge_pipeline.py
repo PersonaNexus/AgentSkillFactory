@@ -14,6 +14,7 @@ from agentforge.pipeline.stages import (
     IngestStage,
     MapStage,
     PipelineStage,
+    TeamComposeStage,
 )
 
 
@@ -47,6 +48,7 @@ class ForgePipeline:
 
     def to_blueprint(self, context: dict[str, Any]) -> AgentBlueprint:
         """Convert pipeline context into an AgentBlueprint."""
+        agent_team = context.get("agent_team")
         return AgentBlueprint(
             source_jd=context["jd"],
             extraction=context["extraction"],
@@ -57,11 +59,12 @@ class ForgePipeline:
             coverage_score=context.get("coverage_score", 0.0),
             coverage_gaps=context.get("coverage_gaps", []),
             automation_estimate=context["extraction"].automation_potential,
+            agent_team=agent_team.to_dict() if agent_team else None,
         )
 
     @classmethod
     def default(cls) -> "ForgePipeline":
-        """Standard pipeline: ingest -> extract -> map -> culture -> generate -> analyze."""
+        """Standard pipeline: ingest -> extract -> map -> culture -> generate -> analyze -> team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
         pipeline.add_stage(ExtractStage())
@@ -69,15 +72,17 @@ class ForgePipeline:
         pipeline.add_stage(CultureStage())
         pipeline.add_stage(GenerateStage())
         pipeline.add_stage(AnalyzeStage())
+        pipeline.add_stage(TeamComposeStage())
         return pipeline
 
     @classmethod
     def quick(cls) -> "ForgePipeline":
-        """Minimal pipeline: ingest -> extract -> generate (no analysis)."""
+        """Minimal pipeline: ingest -> extract -> generate -> team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
         pipeline.add_stage(ExtractStage())
         pipeline.add_stage(GenerateStage())
+        pipeline.add_stage(TeamComposeStage())
         return pipeline
 
     @classmethod
@@ -90,4 +95,5 @@ class ForgePipeline:
         pipeline.add_stage(CultureStage())
         pipeline.add_stage(GenerateStage())
         pipeline.add_stage(DeepAnalyzeStage())
+        pipeline.add_stage(TeamComposeStage())
         return pipeline

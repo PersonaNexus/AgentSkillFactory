@@ -37,3 +37,7 @@ class AgentBlueprint(BaseModel):
         0.0, ge=0.0, le=1.0,
         description="Estimated percentage of role automatable",
     )
+    agent_team: dict | None = Field(
+        None,
+        description="Proposed AI agent team composition for this role",
+    )

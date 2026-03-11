@@ -27,6 +27,7 @@ _STAGE_MESSAGES = {
     "generate": "Generating agent identity...",
     "analyze": "Running gap analysis...",
     "deep_analyze": "Running deep gap analysis...",
+    "team_compose": "Composing agent team...",
 }
 
 
@@ -92,6 +93,11 @@ def _run_forge(
             "coverage_gaps": context.get("coverage_gaps"),
             "skill_scores": context.get("skill_scores"),
         }
+
+        # Include agent team composition
+        agent_team = context.get("agent_team")
+        if agent_team:
+            result["agent_team"] = agent_team.to_dict()
 
         # Include skill folder data for download
         if not no_skill_file and "skill_folder" in context:
