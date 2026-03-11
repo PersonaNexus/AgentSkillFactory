@@ -182,10 +182,12 @@ def forge(
         False, "--deep", help="Deep analysis: detailed skill scoring and priority ranking"
     ),
     no_skill_file: bool = typer.Option(
-        False, "--no-skill-file", help="Skip SKILL.md generation"
+        False, "--no-skill-file",
+        help="Skip full agent profile (detailed SKILL.md with analysis & embedded data)",
     ),
     skill_folder: bool = typer.Option(
-        False, "--skill-folder", help="Output Claude-compatible skill folder (instructions.md + manifest.json)"
+        False, "--skill-folder",
+        help="Output Claude Code-ready skill folder (drop into .claude/skills/)",
     ),
     culture: Path | None = typer.Option(
         None, "--culture", "-c", help="Culture file (YAML or markdown) to infuse"
@@ -195,12 +197,17 @@ def forge(
     """Forge a complete AI agent blueprint from a job description.
 
     Runs the full pipeline: ingest -> extract -> map -> culture -> generate -> analyze.
-    Outputs a PersonaNexus identity YAML and optional SKILL.md.
+
+    Outputs:
+      - PersonaNexus identity YAML (always)
+      - Claude Code skill folder (always) — drop into .claude/skills/ to use
+      - Full agent profile SKILL.md (unless --no-skill-file) — detailed analysis
 
     Examples:
         agentforge forge job_posting.txt
         agentforge forge resume.pdf --culture startup.yaml -d ./agents
         agentforge forge posting.md --quick --no-skill-file
+        agentforge forge job.txt --skill-folder  # also save skill folder to disk
         agentforge forge job.txt --deep  # enhanced gap analysis
     """
     from agentforge.pipeline.forge_pipeline import ForgePipeline
@@ -303,19 +310,22 @@ def forge(
     yaml_path.write_text(identity_yaml)
     console.print(f"[green]Identity saved:[/green] {yaml_path}")
 
-    # Save SKILL.md
+    # Save full agent profile SKILL.md (detailed analysis + embedded data)
     if not no_skill_file and "skill_file" in context:
         skill_path = safe_output_path(output_dir, f"{agent_id}_SKILL.md")
         skill_path.write_text(context["skill_file"])
-        console.print(f"[green]Skill file saved:[/green] {skill_path}")
+        console.print(f"[green]Full agent profile saved:[/green] {skill_path}")
 
-    # Save skill folder (Claude Code format: <skill-name>/SKILL.md)
+    # Save Claude Code skill folder (drop into .claude/skills/ to use)
     if skill_folder and "skill_folder" in context:
         sf = context["skill_folder"]
         folder_path = safe_output_path(output_dir, sf.skill_name)
         folder_path.mkdir(exist_ok=True)
         (folder_path / "SKILL.md").write_text(sf.skill_md)
-        console.print(f"[green]Skill folder saved:[/green] {folder_path}/")
+        console.print(
+            f"[green]Claude Code skill saved:[/green] {folder_path}/\n"
+            f"  [dim]Copy to .claude/skills/ or ~/.claude/skills/ to use[/dim]"
+        )
 
     # Build blueprint
     blueprint = pipeline.to_blueprint(context)
