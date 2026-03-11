@@ -490,9 +490,171 @@ function renderSkillScores(scores) {
     <tbody>${rows}</tbody></table>`;
 }
 
+// ========== AGENT TEAM COMPOSITION ==========
+// Archetype definitions for client-side team composition (mirrors backend)
+const TEAM_ARCHETYPES = {
+    research_analyst: {
+        label: 'Research Analyst', icon: '\uD83D\uDD0D',
+        categories: ['domain'],
+        keywords: ['research','analysis','data','insight','market','competitive','trend','report','survey','benchmark'],
+        personality: { rigor: 0.85, creativity: 0.60, patience: 0.75, directness: 0.70 },
+        benefit: 'Continuously surfaces insights so {role} can make faster, data-informed decisions',
+    },
+    technical_builder: {
+        label: 'Technical Builder', icon: '\uD83D\uDEE0\uFE0F',
+        categories: ['hard'],
+        keywords: ['develop','build','code','engineer','implement','architect','design','test','debug','deploy','software','programming'],
+        personality: { rigor: 0.90, directness: 0.80, creativity: 0.55, patience: 0.60 },
+        benefit: 'Handles technical implementation so {role} can focus on architecture and strategy',
+    },
+    ops_automator: {
+        label: 'Ops Automator', icon: '\u2699\uFE0F',
+        categories: ['tool'],
+        keywords: ['automate','pipeline','workflow','process','monitor','ci/cd','devops','cloud','integration','platform','tool'],
+        personality: { rigor: 0.85, directness: 0.85, patience: 0.50, creativity: 0.40 },
+        benefit: 'Manages tooling and automation so {role} spends less time on repetitive tasks',
+    },
+    content_crafter: {
+        label: 'Content Crafter', icon: '\u270D\uFE0F',
+        categories: [],
+        keywords: ['write','draft','document','content','copy','edit','report','proposal','presentation','communication','spec','prd'],
+        personality: { creativity: 0.80, verbosity: 0.75, warmth: 0.60, rigor: 0.65 },
+        benefit: 'Drafts and polishes documents and communications so {role} can iterate quickly',
+    },
+    data_navigator: {
+        label: 'Data Navigator', icon: '\uD83D\uDCCA',
+        categories: [],
+        keywords: ['data','analytics','metrics','dashboard','sql','database','visualization','reporting','statistics','bi','etl'],
+        personality: { rigor: 0.90, directness: 0.75, patience: 0.65, creativity: 0.45 },
+        benefit: 'Wrangles data and surfaces key metrics so {role} always has the numbers',
+    },
+    stakeholder_liaison: {
+        label: 'Stakeholder Liaison', icon: '\uD83E\uDD1D',
+        categories: ['soft'],
+        keywords: ['stakeholder','client','customer','communicate','present','negotiate','relationship','collaborate','meeting'],
+        personality: { warmth: 0.85, empathy: 0.80, patience: 0.80, directness: 0.55 },
+        benefit: 'Prepares briefs and tracks action items so {role} can focus on relationships',
+    },
+    quality_guardian: {
+        label: 'Quality Guardian', icon: '\uD83D\uDEE1\uFE0F',
+        categories: [],
+        keywords: ['quality','test','review','audit','compliance','security','standard','validation','risk','governance'],
+        personality: { rigor: 0.95, directness: 0.80, epistemic_humility: 0.75, patience: 0.70 },
+        benefit: 'Reviews and validates work against standards so {role} can ship with confidence',
+    },
+};
+
+function composeAgentTeam(data) {
+    const skills = data.skills || [];
+    if (!skills.length) return null;
+
+    const roleTitle = (data.role && data.role.title) || 'this role';
+    const roleShort = roleTitle.split(',')[0].trim();
+
+    // Score each archetype
+    const scored = [];
+    for (const [key, arch] of Object.entries(TEAM_ARCHETYPES)) {
+        let matchedSkills = [];
+        let score = 0;
+        skills.forEach(s => {
+            let pts = 0;
+            if (arch.categories.includes(s.category)) pts += 2;
+            const text = `${s.name} ${s.context || ''} ${s.genai_application || ''}`.toLowerCase();
+            arch.keywords.forEach(kw => { if (text.includes(kw)) pts += 0.5; });
+            if (pts > 0) { matchedSkills.push(s); score += pts; }
+        });
+        if (matchedSkills.length) scored.push({ key, score, skills: matchedSkills });
+    }
+    scored.sort((a, b) => b.score - a.score);
+
+    // Greedy assignment
+    const assigned = new Set();
+    const teammates = [];
+    for (const entry of scored) {
+        if (teammates.length >= 5) break;
+        const unassigned = entry.skills.filter(s => !assigned.has(s.name));
+        if (!unassigned.length) continue;
+        const arch = TEAM_ARCHETYPES[entry.key];
+        teammates.push({
+            _key: entry.key,
+            name: arch.label,
+            archetype: arch.label,
+            icon: arch.icon,
+            skills: unassigned.map(s => s.name),
+            personality: arch.personality,
+            benefit: arch.benefit.replace('{role}', roleShort),
+        });
+        unassigned.forEach(s => assigned.add(s.name));
+    }
+
+    // Sweep remaining into closest-matching teammate
+    const remaining = skills.filter(s => !assigned.has(s.name));
+    if (remaining.length && teammates.length) {
+        remaining.forEach(s => {
+            let best = 0, bestScore = 0;
+            teammates.forEach((tm, i) => {
+                const arch = TEAM_ARCHETYPES[tm._key];
+                if (!arch) return;
+                let sc = 0;
+                if (arch.categories.includes(s.category)) sc += 2;
+                const txt = `${s.name} ${s.context || ''} ${s.genai_application || ''}`.toLowerCase();
+                arch.keywords.forEach(kw => { if (txt.includes(kw)) sc += 0.5; });
+                if (sc > bestScore) { bestScore = sc; best = i; }
+            });
+            teammates[best].skills.push(s.name);
+        });
+    }
+
+    if (!teammates.length) return null;
+
+    return {
+        role_title: roleTitle,
+        teammates,
+        team_benefit: `A team of ${teammates.length} specialized AI agents designed to amplify the ${roleShort}'s impact — handling the heavy lifting while keeping humans in the driver's seat.`,
+    };
+}
+
+function renderAgentTeam(team) {
+    if (!team || !team.teammates || !team.teammates.length) return '';
+
+    const cards = team.teammates.map(t => {
+        const topTraits = Object.entries(t.personality || {})
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([name, val]) => `<span class="team-trait">${esc(name.replace('_',' '))} <strong>${Math.round(val*100)}%</strong></span>`)
+            .join('');
+
+        const skillTags = (t.skills || []).slice(0, 6).map(s =>
+            `<span class="team-skill-tag">${esc(s)}</span>`
+        ).join('');
+        const moreSkills = (t.skills || []).length > 6 ? `<span class="team-skill-tag team-skill-more">+${t.skills.length - 6}</span>` : '';
+
+        return `<div class="team-card">
+            <div class="team-card-header">
+                <span class="team-card-icon">${esc(t.icon || '\uD83E\uDD16')}</span>
+                <div>
+                    <div class="team-card-name">${esc(t.name)}</div>
+                    <div class="team-card-archetype">${esc(t.archetype)}</div>
+                </div>
+            </div>
+            <div class="team-card-benefit">${esc(t.benefit)}</div>
+            <div class="team-card-skills">${skillTags}${moreSkills}</div>
+            <div class="team-card-traits">${topTraits}</div>
+        </div>`;
+    }).join('');
+
+    return `<div class="panel panel-team">
+        <div class="panel-title">Your Agent Team</div>
+        <small>${esc(team.team_benefit)}</small>
+        <div class="team-grid">${cards}</div>
+    </div>`;
+}
+
 function renderExtractionResult(data, salaryMin, salaryMax) {
     const valueEstimate = computeAgentValue(data, salaryMin, salaryMax);
+    const team = composeAgentTeam(data);
     return renderRolePanel(data.role)
+        + renderAgentTeam(team)
         + renderSkillsTable(data.skills)
         + renderHumanElements(data.skills, data.responsibilities)
         + renderSuggestedTraits(data.suggested_traits)
@@ -616,19 +778,19 @@ document.getElementById('extract-form').addEventListener('submit', async (e) => 
 });
 
 // ========== FORGE ==========
-const FORGE_STAGES = ['ingest', 'extract', 'map', 'culture', 'generate', 'analyze', 'deep_analyze'];
+const FORGE_STAGES = ['ingest', 'extract', 'map', 'culture', 'generate', 'analyze', 'deep_analyze', 'team_compose'];
 const FORGE_STAGE_LABELS = {
     ingest: 'Parse File', extract: 'Extract Skills', map: 'Map Traits',
     culture: 'Apply Culture', generate: 'Generate Identity', analyze: 'Gap Analysis',
-    deep_analyze: 'Deep Analysis'
+    deep_analyze: 'Deep Analysis', team_compose: 'Compose Agent Team'
 };
 
 function initForgeStages(mode) {
     const container = document.getElementById('forge-stages');
     let stages = ['ingest', 'extract'];
-    if (mode === 'default') stages.push('map', 'culture', 'generate', 'analyze');
-    else if (mode === 'deep') stages.push('map', 'culture', 'generate', 'deep_analyze');
-    else stages.push('generate');
+    if (mode === 'default') stages.push('map', 'culture', 'generate', 'analyze', 'team_compose');
+    else if (mode === 'deep') stages.push('map', 'culture', 'generate', 'deep_analyze', 'team_compose');
+    else stages.push('generate', 'team_compose');
 
     container.innerHTML = stages.map(s =>
         `<div class="stage-item stage-pending" id="stage-${s}">
@@ -698,7 +860,16 @@ document.getElementById('forge-form').addEventListener('submit', async (e) => {
                 _lastForgeResult = data;
                 const bp = data.blueprint;
                 let html = renderDownloadBar('Forge');
-                html += renderExtractionResult(bp.extraction, forgeSalaryMin, forgeSalaryMax);
+                // Use server-provided agent team if available, otherwise client-side
+                const forgeTeam = data.agent_team || composeAgentTeam(bp.extraction);
+                html += renderRolePanel(bp.extraction.role);
+                html += renderAgentTeam(forgeTeam);
+                html += renderSkillsTable(bp.extraction.skills);
+                html += renderHumanElements(bp.extraction.skills, bp.extraction.responsibilities);
+                html += renderSuggestedTraits(bp.extraction.suggested_traits);
+                html += renderAutomation(bp.extraction.automation_potential, bp.extraction.automation_rationale);
+                const forgeValue = computeAgentValue(bp.extraction, forgeSalaryMin, forgeSalaryMax);
+                html += renderAgentValue(forgeValue);
                 if (data.traits) html += renderTraitBars(data.traits);
                 html += renderGapAnalysis(data.coverage_score, data.coverage_gaps);
                 if (data.skill_scores) html += renderSkillScores(data.skill_scores);

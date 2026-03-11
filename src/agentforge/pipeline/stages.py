@@ -155,3 +155,16 @@ class DeepAnalyzeStage(PipelineStage):
         context["coverage_gaps"] = gaps
         context["skill_scores"] = skill_scores
         return context
+
+
+class TeamComposeStage(PipelineStage):
+    """Compose an AI agent team from extraction results."""
+
+    name = "team_compose"
+
+    def run(self, context: dict[str, Any]) -> dict[str, Any]:
+        from agentforge.analysis.team_composer import TeamComposer
+
+        composer = TeamComposer()
+        context["agent_team"] = composer.compose(context["extraction"])
+        return context

@@ -450,6 +450,85 @@
     background: color-mix(in srgb, var(--pico-color-red-500, #ef4444) 8%, transparent);
 }
 
+/* ========== AGENT TEAM PANEL ========== */
+.panel-team { border-color: var(--af-cyan); }
+.team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+.team-card {
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: 8px;
+    padding: 0.75rem;
+    background: var(--pico-card-background-color);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.team-card:hover {
+    border-color: var(--af-cyan);
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.12);
+}
+.team-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.team-card-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+.team-card-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.2;
+}
+.team-card-archetype {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.team-card-benefit {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    color: var(--pico-muted-color);
+}
+.team-card-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+}
+.team-skill-tag {
+    display: inline-block;
+    background: color-mix(in srgb, var(--af-cyan) 15%, transparent);
+    color: var(--af-cyan);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.5rem;
+    white-space: nowrap;
+}
+.team-skill-more {
+    background: color-mix(in srgb, var(--af-cyan) 8%, transparent);
+    opacity: 0.7;
+}
+.team-card-traits {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+.team-trait {
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+.team-trait strong {
+    color: var(--af-cyan);
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     /* Stack trait bars vertically */
@@ -486,7 +565,7 @@
     }
 
     /* Card grid single column */
-    .card-grid {
+    .card-grid, .team-grid {
         grid-template-columns: 1fr;
     }
 

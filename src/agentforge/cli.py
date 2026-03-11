@@ -304,6 +304,35 @@ def forge(
             )
         console.print(detail_table)
 
+    # Agent team composition
+    agent_team = context.get("agent_team")
+    if agent_team and agent_team.teammates:
+        team_table = Table(
+            title="Your Agent Team",
+            show_lines=True,
+            title_style="bold cyan",
+        )
+        team_table.add_column("Agent", style="cyan", min_width=18)
+        team_table.add_column("Archetype", style="green")
+        team_table.add_column("Skills", style="dim", max_width=35)
+        team_table.add_column("Benefit", style="white", max_width=50)
+
+        for teammate in agent_team.teammates:
+            skills_str = ", ".join(teammate.skill_names()[:4])
+            if len(teammate.skill_names()) > 4:
+                skills_str += f" +{len(teammate.skill_names()) - 4}"
+            team_table.add_row(
+                teammate.name,
+                teammate.archetype,
+                skills_str,
+                teammate.benefit,
+            )
+        console.print(team_table)
+        console.print(Panel(
+            agent_team.team_benefit,
+            border_style="cyan",
+        ))
+
     # Save identity YAML with safe filename
     agent_id = context["identity"].metadata.id
     yaml_path = safe_output_path(output_dir, f"{agent_id}.yaml")
