@@ -309,13 +309,12 @@ def forge(
         skill_path.write_text(context["skill_file"])
         console.print(f"[green]Skill file saved:[/green] {skill_path}")
 
-    # Save skill folder
+    # Save skill folder (Claude Code format: <skill-name>/SKILL.md)
     if skill_folder and "skill_folder" in context:
         sf = context["skill_folder"]
-        folder_path = safe_output_path(output_dir, sf.agent_id)
+        folder_path = safe_output_path(output_dir, sf.skill_name)
         folder_path.mkdir(exist_ok=True)
-        (folder_path / "instructions.md").write_text(sf.instructions_md)
-        (folder_path / "manifest.json").write_text(sf.manifest_json)
+        (folder_path / "SKILL.md").write_text(sf.skill_md)
         console.print(f"[green]Skill folder saved:[/green] {folder_path}/")
 
     # Build blueprint
@@ -662,10 +661,6 @@ def serve(
         ))
         raise typer.Exit(code=1)
 
-    from agentforge.web.app import create_app
-
-    application = create_app()
-
     if open_browser:
         import threading
         import webbrowser
@@ -682,7 +677,20 @@ def serve(
         "Press Ctrl+C to stop.",
         border_style="green",
     ))
-    uvicorn.run(application, host=host, port=port, reload=reload)
+
+    if reload:
+        # uvicorn requires an import string for --reload mode
+        uvicorn.run(
+            "agentforge.web.app:create_app",
+            factory=True,
+            host=host,
+            port=port,
+            reload=True,
+        )
+    else:
+        from agentforge.web.app import create_app
+
+        uvicorn.run(create_app(), host=host, port=port)
 
 
 if __name__ == "__main__":

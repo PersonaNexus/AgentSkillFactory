@@ -41,14 +41,22 @@ class SeniorityLevel(enum.StrEnum):
 
 def _coerce_enum(value: str, enum_cls: type[enum.StrEnum], default: enum.StrEnum) -> enum.StrEnum:
     """Try to match a value to an enum, falling back to default for LLM hallucinations."""
+    if value is None:
+        return default
     if isinstance(value, enum_cls):
         return value
     normalized = str(value).strip().lower().replace(" ", "_").replace("-", "_")
+    # Try exact match first
     try:
         return enum_cls(normalized)
     except ValueError:
-        logger.warning("Coercing invalid %s value %r → %s", enum_cls.__name__, value, default)
-        return default
+        pass
+    # Try substring/prefix match (e.g. "expert_level" → "expert", "hard_skill" → "hard")
+    for member in enum_cls:
+        if normalized.startswith(member.value) or member.value.startswith(normalized):
+            return member
+    logger.warning("Coercing invalid %s value %r → %s", enum_cls.__name__, value, default)
+    return default
 
 
 class ExtractedSkill(BaseModel):
@@ -83,6 +91,20 @@ class ExtractedSkill(BaseModel):
     def coerce_category(cls, v: object) -> SkillCategory:
         return _coerce_enum(v, SkillCategory, SkillCategory.HARD)
 
+    @field_validator("context", "genai_application", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return v
+
+    @field_validator("examples", mode="before")
+    @classmethod
+    def coerce_none_examples(cls, v: object) -> list:
+        if v is None or v == "":
+            return []
+        return v
+
 
 class ExtractedRole(BaseModel):
     """Role information extracted from a job description."""
@@ -94,6 +116,33 @@ class ExtractedRole(BaseModel):
     audience: list[str] = Field(default_factory=list)
     seniority: SeniorityLevel = SeniorityLevel.MID
     domain: str = Field(default="general")
+
+    @field_validator("scope_primary", "scope_secondary", "audience", mode="before")
+    @classmethod
+    def coerce_none_to_list(cls, v: object) -> list:
+        """LLM may return None or empty string for list fields; coerce to empty list."""
+        if v is None or v == "":
+            return []
+        return v
+
+    @field_validator("seniority", mode="before")
+    @classmethod
+    def coerce_seniority(cls, v: object) -> SeniorityLevel:
+        return _coerce_enum(v, SeniorityLevel, SeniorityLevel.MID)
+
+    @field_validator("domain", mode="before")
+    @classmethod
+    def coerce_domain(cls, v: object) -> str:
+        if v is None:
+            return "general"
+        return v
+
+    @field_validator("title", "purpose", mode="before")
+    @classmethod
+    def coerce_none_to_empty_string(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return v
 
 
 class SuggestedTraits(BaseModel):
@@ -129,9 +178,42 @@ class ExtractionResult(BaseModel):
     suggested_traits: SuggestedTraits = Field(default_factory=SuggestedTraits)
     automation_potential: float = Field(0.0, ge=0.0, le=1.0)
     automation_rationale: str = ""
+
     salary_min: float | None = Field(
         None, ge=0, description="Minimum annual salary if stated in the JD"
     )
     salary_max: float | None = Field(
         None, ge=0, description="Maximum annual salary if stated in the JD"
     )
+
+    @field_validator("skills", "responsibilities", "qualifications", mode="before")
+    @classmethod
+    def coerce_none_to_list(cls, v: object) -> list:
+        """LLM may return None or empty string for list fields; coerce to empty list."""
+        if v is None or v == "":
+            return []
+        return v
+
+    @field_validator("automation_potential", mode="before")
+    @classmethod
+    def coerce_none_to_zero(cls, v: object) -> float:
+        """LLM may return None for automation_potential; coerce to 0."""
+        if v is None:
+            return 0.0
+        return v
+
+    @field_validator("suggested_traits", mode="before")
+    @classmethod
+    def coerce_none_to_default_traits(cls, v: object) -> dict | SuggestedTraits:
+        """LLM may return None for suggested_traits; coerce to empty traits."""
+        if v is None:
+            return {}
+        return v
+
+    @field_validator("automation_rationale", mode="before")
+    @classmethod
+    def coerce_none_to_empty_str(cls, v: object) -> str:
+        """LLM may return None for string fields; coerce to empty string."""
+        if v is None:
+            return ""
+        return v
