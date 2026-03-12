@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import io
 import json
+import logging
 import tempfile
 import threading
+import traceback
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -156,8 +158,9 @@ def _run_forge(
 
         job.emit_done(result)
 
-    except Exception:
-        job.emit_error("Pipeline failed. Check server logs for details.")
+    except Exception as exc:
+        logging.getLogger(__name__).exception("Forge pipeline failed")
+        job.emit_error(f"Pipeline failed: {exc}")
     finally:
         file_path.unlink(missing_ok=True)
         if culture_path:
