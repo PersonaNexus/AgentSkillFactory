@@ -848,6 +848,19 @@ function initForgeWizard() {
     document.getElementById('forge-back-2').addEventListener('click', () => forgeShowStep(1));
     document.getElementById('forge-next-2').addEventListener('click', () => startForge());
 
+    // Import identity
+    const importBtn = document.getElementById('forge-import-btn');
+    const importFileInput = document.getElementById('forge-import-file');
+    if (importBtn && importFileInput) {
+        importBtn.addEventListener('click', () => importFileInput.click());
+        importFileInput.addEventListener('change', () => {
+            if (importFileInput.files.length > 0) {
+                document.getElementById('forge-import-filename').textContent = importFileInput.files[0].name;
+                importIdentity(importFileInput.files[0]);
+            }
+        });
+    }
+
     // Personality sliders
     initTraitSliders();
 }
@@ -954,6 +967,39 @@ function completeAllStages() {
         el.classList.add('stage-done');
         el.querySelector('.forge-stage-icon').innerHTML = '&#10003;';
     });
+}
+
+async function importIdentity(file) {
+    const statusEl = document.getElementById('forge-import-status');
+    const importBtn = document.getElementById('forge-import-btn');
+    importBtn.setAttribute('aria-busy', 'true');
+    importBtn.textContent = 'Importing...';
+    if (statusEl) statusEl.innerHTML = '';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('output_format', 'claude_code');
+
+        const resp = await fetch('/api/forge/import-identity', { method: 'POST', body: formData });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({ detail: 'Import failed' }));
+            throw new Error(err.detail || 'Import failed');
+        }
+        const { job_id, result } = await resp.json();
+
+        // Jump straight to results (step 4)
+        _lastForgeResult = result;
+        renderForgeResults(result, job_id, null, null);
+        forgeShowStep(4);
+    } catch (err) {
+        if (statusEl) {
+            statusEl.innerHTML = `<div class="panel panel-red" style="margin-top:0.75rem;padding:0.75rem;font-size:0.85rem;">${esc(err.message)}</div>`;
+        }
+    } finally {
+        importBtn.removeAttribute('aria-busy');
+        importBtn.textContent = 'Import Identity YAML';
+    }
 }
 
 async function startForge() {

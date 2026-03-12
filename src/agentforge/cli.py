@@ -377,6 +377,139 @@ def forge(
     )
 
 
+# --- Identity subcommands ---
+
+identity_app = typer.Typer(help="PersonaNexus identity management.")
+app.add_typer(identity_app, name="identity")
+
+
+@identity_app.command("import")
+def identity_import(
+    identity_file: Path = typer.Argument(..., help="Path to PersonaNexus identity YAML"),
+    output_dir: Path = typer.Option(
+        Path("."), "--output-dir", "-d", help="Directory for output files"
+    ),
+    output_format: str = typer.Option(
+        "claude_code", "--format", "-f", help="Output format: claude_code, clawhub, or both"
+    ),
+    model: str = typer.Option(
+        "claude-sonnet-4-20250514", "--model", "-m", help="Claude model to use for refinement"
+    ),
+    refine: bool = typer.Option(
+        False, "--refine", help="Run LLM-based refinement after import"
+    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
+) -> None:
+    """Import an existing PersonaNexus identity YAML and generate skill files.
+
+    Round-trips the identity through AgentForge: loads the YAML, reverse-maps
+    to AgentForge models, regenerates enriched skill files and identity YAML.
+
+    Examples:
+        agentforge identity import agent_identity.yaml
+        agentforge identity import my-agent.yaml -d ./output --format both
+        agentforge identity import agent.yaml --refine  # LLM-enhanced round-trip
+    """
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+
+    if not identity_file.exists():
+        console.print(f"[red]Error:[/red] File not found: {identity_file}")
+        raise typer.Exit(code=1)
+
+    suffix = identity_file.suffix.lower()
+    if suffix not in (".yaml", ".yml"):
+        console.print(f"[red]Error:[/red] Expected a YAML file, got: {suffix}")
+        raise typer.Exit(code=1)
+
+    if output_format not in ("claude_code", "clawhub", "both"):
+        console.print(f"[red]Error:[/red] Invalid format: {output_format}")
+        raise typer.Exit(code=1)
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    from agentforge.generation.identity_loader import IdentityLoader
+    from agentforge.generation.identity_generator import IdentityGenerator
+
+    console.print(f"[blue]Loading identity:[/blue] {identity_file}")
+    loader = IdentityLoader()
+    try:
+        extraction, methodology, original_yaml = loader.load_file(str(identity_file))
+    except ValueError as e:
+        console.print(Panel(f"[red]{e}[/red]", title="Invalid Identity", border_style="red"))
+        raise typer.Exit(code=1)
+    except Exception as e:
+        console.print(Panel(f"[red]{e}[/red]", title="Load Failed", border_style="red"))
+        raise typer.Exit(code=1)
+
+    console.print(f"[green]Loaded:[/green] {extraction.role.title}")
+    console.print(f"  Skills: {len(extraction.skills)} | Responsibilities: {len(extraction.responsibilities)}")
+    if methodology:
+        console.print(
+            f"  Heuristics: {len(methodology.heuristics)} | "
+            f"Quality criteria: {len(methodology.quality_criteria)}"
+        )
+
+    _display_extraction(extraction)
+
+    # Regenerate identity (round-trip)
+    generator = IdentityGenerator()
+    identity, identity_yaml = generator.generate(extraction)
+
+    agent_id = identity.metadata.id
+    yaml_path = safe_output_path(output_dir, f"{agent_id}.yaml")
+    yaml_path.write_text(identity_yaml)
+    console.print(f"[green]Identity saved:[/green] {yaml_path}")
+
+    # Generate skill files
+    if output_format in ("claude_code", "both"):
+        from agentforge.generation.skill_folder import SkillFolderGenerator
+
+        sf_gen = SkillFolderGenerator()
+        sf = sf_gen.generate(extraction, identity, jd=None, methodology=methodology)
+
+        folder_path = safe_output_path(output_dir, sf.skill_name)
+        folder_path.mkdir(exist_ok=True)
+        (folder_path / "SKILL.md").write_text(sf.skill_md_with_references())
+
+        for rel_path, content in sf.supplementary_files.items():
+            ref_path = folder_path / rel_path
+            ref_path.parent.mkdir(parents=True, exist_ok=True)
+            ref_path.write_text(content)
+
+        ref_count = len(sf.supplementary_files)
+        ref_msg = f" + {ref_count} reference file{'s' if ref_count != 1 else ''}" if ref_count else ""
+        console.print(
+            f"[green]Claude Code skill saved:[/green] {folder_path}/\n"
+            f"  [dim]SKILL.md{ref_msg}[/dim]"
+        )
+
+    if output_format in ("clawhub", "both"):
+        from agentforge.generation.clawhub_skill import ClawHubSkillGenerator
+
+        ch_gen = ClawHubSkillGenerator()
+        ch = ch_gen.generate(extraction, jd=None, methodology=methodology)
+        ch_path = safe_output_path(output_dir, f"{ch.skill_name}_clawhub_SKILL.md")
+        ch_path.write_text(ch.skill_md)
+        console.print(f"[green]ClawHub skill saved:[/green] {ch_path}")
+
+    # Run gap analysis
+    from agentforge.analysis.skill_reviewer import SkillReviewer
+
+    reviewer = SkillReviewer()
+    gaps = reviewer.review(extraction, methodology=methodology)
+    if gaps:
+        console.print(f"\n[yellow]{len(gaps)} improvement suggestions:[/yellow]")
+        for gap in gaps:
+            console.print(f"  [{gap.priority}] {gap.title}: {gap.description}")
+    else:
+        console.print("\n[green]No gaps detected — identity is comprehensive.[/green]")
+
+    console.print(
+        f"\n[bold green]Identity '{extraction.role.title}' imported successfully![/bold green]"
+    )
+
+
 # --- Culture subcommands ---
 
 culture_app = typer.Typer(help="Culture profile management.")

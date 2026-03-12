@@ -167,6 +167,135 @@ def _run_forge(
             culture_path.unlink(missing_ok=True)
 
 
+@router.post("/forge/import-identity")
+async def import_identity(
+    request: Request,
+    file: UploadFile = File(...),
+    output_format: str = Form("claude_code"),
+) -> dict:
+    """Import an existing PersonaNexus identity YAML and prepare it for refinement.
+
+    Reverse-maps the identity to AgentForge models, generates skill files,
+    and returns a job pre-populated with the result — ready for the refine loop.
+    """
+    from agentforge.generation.identity_generator import IdentityGenerator
+    from agentforge.generation.identity_loader import IdentityLoader
+    from agentforge.generation.skill_folder import SkillFolderGenerator
+    from agentforge.analysis.skill_reviewer import SkillReviewer
+    from agentforge.models.extracted_skills import (
+        ExtractionResult,
+        MethodologyExtraction,
+    )
+
+    filename = file.filename or "identity.yaml"
+    suffix = Path(filename).suffix.lower()
+    if suffix not in (".yaml", ".yml"):
+        raise HTTPException(status_code=422, detail="Only YAML files are supported")
+
+    if output_format not in ("claude_code", "clawhub", "both"):
+        raise HTTPException(status_code=422, detail=f"Invalid output_format: {output_format}")
+
+    content = await file.read()
+    try:
+        yaml_str = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=422, detail="File is not valid UTF-8 text")
+
+    loader = IdentityLoader()
+    try:
+        extraction, methodology, original_yaml = loader.load_yaml(yaml_str)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Failed to parse identity: {exc}")
+
+    # Regenerate identity (round-trip validates and normalizes)
+    generator = IdentityGenerator()
+    identity, identity_yaml = generator.generate(extraction)
+
+    result_update: dict[str, Any] = {
+        "identity_yaml": identity_yaml,
+        "source_filename": safe_filename(Path(filename).stem)[:100] or "identity",
+    }
+
+    supplementary_files: dict[str, str] = {}
+
+    if output_format in ("claude_code", "both"):
+        skill_folder_gen = SkillFolderGenerator()
+        sf = skill_folder_gen.generate(
+            extraction, identity,
+            jd=None,
+            methodology=methodology,
+        )
+        supplementary_files = dict(sf.supplementary_files)
+        result_update["skill_folder"] = {
+            "skill_md": sf.skill_md_with_references(),
+            "skill_name": sf.skill_name,
+            "supplementary_files": supplementary_files,
+        }
+
+    if output_format in ("clawhub", "both"):
+        from agentforge.generation.clawhub_skill import ClawHubSkillGenerator
+
+        clawhub_gen = ClawHubSkillGenerator()
+        ch = clawhub_gen.generate(extraction, jd=None, methodology=methodology)
+        result_update["clawhub_skill"] = {
+            "skill_md": ch.skill_md,
+            "skill_name": ch.skill_name,
+        }
+
+    # Run skill quality review
+    reviewer = SkillReviewer()
+    skill_gaps = reviewer.review_to_dict(extraction, methodology=methodology)
+    result_update["skill_gaps"] = skill_gaps
+
+    # Store as a completed job so the refine loop works
+    store = _get_store(request)
+    job = store.create()
+    job.status = "done"
+
+    result_update["_refine_context"] = {
+        "extraction": extraction.model_dump(mode="json"),
+        "methodology": methodology.model_dump(mode="json") if methodology else None,
+        "identity_yaml": identity_yaml,
+        "output_format": output_format,
+        "user_examples": "",
+        "user_frameworks": "",
+        "supplementary_files": supplementary_files,
+    }
+
+    # Build a minimal blueprint for the frontend
+    from agentforge.models.blueprint import AgentBlueprint
+    from agentforge.models.job_description import JobDescription
+
+    placeholder_jd = JobDescription(
+        title=extraction.role.title,
+        raw_text=f"Imported from PersonaNexus identity: {extraction.role.title}",
+    )
+    blueprint = AgentBlueprint(
+        source_jd=placeholder_jd,
+        extraction=extraction,
+        identity_yaml=identity_yaml,
+        coverage_score=0.0,
+        coverage_gaps=[],
+        automation_estimate=extraction.automation_potential,
+    )
+    result_update["blueprint"] = blueprint.model_dump(mode="json")
+
+    job.result = result_update
+
+    return {
+        "job_id": job.id,
+        "result": {
+            "blueprint": result_update["blueprint"],
+            "identity_yaml": identity_yaml,
+            "skill_folder": result_update.get("skill_folder"),
+            "clawhub_skill": result_update.get("clawhub_skill"),
+            "skill_gaps": skill_gaps,
+        },
+    }
+
+
 @router.post("/forge", status_code=202)
 async def start_forge(
     request: Request,

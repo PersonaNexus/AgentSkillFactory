@@ -818,6 +818,44 @@
     align-items: center;
     margin-top: 1.5rem;
 }
+.forge-import-divider {
+    text-align: center;
+    margin: 1.5rem 0;
+    position: relative;
+}
+.forge-import-divider::before,
+.forge-import-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: var(--pico-muted-border-color);
+}
+.forge-import-divider::before { left: 0; }
+.forge-import-divider::after { right: 0; }
+.forge-import-divider span {
+    background: var(--pico-background-color);
+    padding: 0 1rem;
+    color: var(--pico-muted-color);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.forge-import-section {
+    text-align: center;
+    padding: 1rem 0 0;
+}
+.forge-import-section h4 { margin-bottom: 0.25rem; }
+.forge-import-section p { font-size: 0.85rem; opacity: 0.7; margin-bottom: 0.75rem; }
+.forge-import-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+.forge-import-btn { margin: 0; }
+.forge-import-filename { font-size: 0.85rem; font-weight: 600; }
 .wizard-next-btn,
 .wizard-back-btn {
     cursor: pointer;
