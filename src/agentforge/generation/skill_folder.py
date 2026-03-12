@@ -20,7 +20,6 @@ Frontmatter fields (per Anthropic docs):
 
 from __future__ import annotations
 
-import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -36,7 +35,7 @@ from agentforge.generation.skill_file import (
     _trait_description,
     _trait_prompt,
 )
-from agentforge.utils import safe_filename
+from agentforge.utils import make_skill_slug, truncate_description
 
 
 class SkillFolderResult(BaseModel):
@@ -101,12 +100,7 @@ class SkillFolderGenerator:
         Produces lowercase-hyphenated names like 'senior-data-engineer'.
         Max 64 chars per Anthropic spec.
         """
-        raw = safe_filename(extraction.role.title).lower().replace("_", "-")
-        raw = re.sub(r"-+", "-", raw).strip("-")
-        # Enforce 64-char limit per spec
-        if len(raw) > 64:
-            raw = raw[:64].rstrip("-")
-        return raw or "generated-skill"
+        return make_skill_slug(extraction.role.title)
 
     # ------------------------------------------------------------------
     # SKILL.md rendering (frontmatter + body)
@@ -177,9 +171,7 @@ class SkillFolderGenerator:
                 )
                 purpose = trigger_hint + purpose
 
-        if len(purpose) > 200:
-            purpose = purpose[:197] + "..."
-        return purpose.replace('"', '\\"')
+        return truncate_description(purpose).replace('"', '\\"')
 
     def _derive_allowed_tools(self, extraction: ExtractionResult) -> list[str]:
         """Derive appropriate allowed-tools based on the role's skills."""
@@ -200,13 +192,7 @@ class SkillFolderGenerator:
         elif hard_skills:
             tools.extend(["Write", "Edit"])
 
-        seen: set[str] = set()
-        unique: list[str] = []
-        for t in tools:
-            if t not in seen:
-                seen.add(t)
-                unique.append(t)
-        return unique
+        return tools
 
     def _render_body(
         self,
@@ -230,12 +216,7 @@ class SkillFolderGenerator:
         self._render_identity(lines, extraction)
 
         # ── Layer 2: Thick methodology ──
-        has_methodology = methodology and (
-            methodology.heuristics
-            or methodology.trigger_mappings
-            or methodology.output_templates
-            or methodology.quality_criteria
-        )
+        has_methodology = methodology and methodology.has_content()
 
         if has_methodology:
             self._render_decision_frameworks(lines, methodology)

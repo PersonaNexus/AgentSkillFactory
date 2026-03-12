@@ -50,10 +50,12 @@ class MethodologyExtractor:
         ) or "- (none extracted)"
 
         # Build user context section
-        if user_examples.strip() or user_frameworks.strip():
+        examples_stripped = user_examples.strip()
+        frameworks_stripped = user_frameworks.strip()
+        if examples_stripped or frameworks_stripped:
             user_context = METHODOLOGY_USER_CONTEXT_WITH_EXAMPLES.format(
-                examples=user_examples.strip() or "(none provided)",
-                frameworks=user_frameworks.strip() or "(none provided)",
+                examples=examples_stripped or "(none provided)",
+                frameworks=frameworks_stripped or "(none provided)",
             )
         else:
             user_context = METHODOLOGY_USER_CONTEXT_EMPTY

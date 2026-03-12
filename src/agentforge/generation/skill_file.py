@@ -174,15 +174,10 @@ class SkillFileGenerator:
         extraction: ExtractionResult,
     ) -> None:
         """Render YAML frontmatter for Claude Code compatibility."""
-        from agentforge.utils import safe_filename
-        import re
+        from agentforge.utils import make_skill_slug, truncate_description
 
-        skill_name = safe_filename(extraction.role.title).lower().replace("_", "-")
-        skill_name = re.sub(r"-+", "-", skill_name).strip("-") or "generated-skill"
-
-        description = extraction.role.purpose
-        if len(description) > 200:
-            description = description[:197] + "..."
+        skill_name = make_skill_slug(extraction.role.title)
+        description = truncate_description(extraction.role.purpose)
 
         lines.append("---")
         lines.append(f"name: {skill_name}")

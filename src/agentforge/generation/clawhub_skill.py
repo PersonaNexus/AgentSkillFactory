@@ -12,7 +12,6 @@ ClawHub spec reference:
 
 from __future__ import annotations
 
-import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -24,7 +23,7 @@ from agentforge.models.extracted_skills import (
     SkillCategory,
 )
 from agentforge.models.job_description import JobDescription
-from agentforge.utils import safe_filename
+from agentforge.utils import make_skill_slug, truncate_description
 
 
 class ClawHubSkillResult(BaseModel):
@@ -59,13 +58,7 @@ class ClawHubSkillGenerator:
 
     def _make_skill_name(self, extraction: ExtractionResult) -> str:
         """ClawHub slug: lowercase, hyphens, ^[a-z0-9][a-z0-9-]*$."""
-        raw = safe_filename(extraction.role.title).lower().replace("_", "-")
-        raw = re.sub(r"-+", "-", raw).strip("-")
-        # Remove leading non-alphanumeric
-        raw = re.sub(r"^[^a-z0-9]+", "", raw)
-        if len(raw) > 64:
-            raw = raw[:64].rstrip("-")
-        return raw or "generated-skill"
+        return make_skill_slug(extraction.role.title, strip_leading=True)
 
     def _render(
         self,
@@ -89,10 +82,7 @@ class ClawHubSkillGenerator:
         extraction: ExtractionResult,
         skill_name: str,
     ) -> None:
-        description = extraction.role.purpose
-        if len(description) > 200:
-            description = description[:197] + "..."
-        description = description.replace('"', '\\"')
+        description = truncate_description(extraction.role.purpose).replace('"', '\\"')
 
         lines.append("---")
         lines.append(f"name: {skill_name}")
@@ -186,12 +176,7 @@ class ClawHubSkillGenerator:
         lines.append(extraction.role.purpose)
         lines.append("")
 
-        has_methodology = methodology and (
-            methodology.heuristics
-            or methodology.trigger_mappings
-            or methodology.output_templates
-            or methodology.quality_criteria
-        )
+        has_methodology = methodology and methodology.has_content()
 
         if has_methodology:
             self._render_trigger_router(lines, methodology)

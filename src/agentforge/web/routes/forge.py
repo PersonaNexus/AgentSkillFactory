@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import tempfile
 import threading
 from pathlib import Path
@@ -12,6 +11,7 @@ from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
+from agentforge.utils import safe_filename
 from agentforge.web.jobs import Job, JobStore
 
 router = APIRouter(tags=["forge"])
@@ -95,13 +95,13 @@ def _run_forge(
 
         # Derive download name from original uploaded filename
         stem = Path(original_filename).stem if original_filename else ""
-        download_stem = re.sub(r'[^\w\-.]', '_', stem)[:100] if stem else ""
+        download_stem = safe_filename(stem)[:100] if stem else ""
 
         # Build result
         sf = context.get("skill_folder")
         ch = context.get("clawhub_skill")
         result: dict[str, Any] = {
-            "blueprint": json.loads(blueprint.model_dump_json()),
+            "blueprint": blueprint.model_dump(mode="json"),
             "identity_yaml": context.get("identity_yaml", ""),
             "source_filename": download_stem,
             "traits": context.get("traits"),
@@ -168,6 +168,9 @@ async def start_forge(
 
     if mode not in ("default", "quick", "deep"):
         raise HTTPException(status_code=422, detail=f"Invalid mode: {mode}")
+
+    if output_format not in ("claude_code", "clawhub", "both"):
+        raise HTTPException(status_code=422, detail=f"Invalid output_format: {output_format}")
 
     # Save uploaded file
     content = await file.read()
@@ -245,7 +248,7 @@ async def forge_download(job_id: str, file_type: str, request: Request):
             raise HTTPException(status_code=404, detail="No skill available")
         content = sf_data["skill_md"]
         source = job.result.get("source_filename", "")
-        safe_name = source or re.sub(r'[^\w\-.]', '_', sf_data["skill_name"])[:100] or "skill"
+        safe_name = source or safe_filename(sf_data["skill_name"])[:100] or "skill"
         filename = f"{safe_name}_SKILL.md"
         media_type = "text/markdown"
     elif file_type == "clawhub":
@@ -254,7 +257,7 @@ async def forge_download(job_id: str, file_type: str, request: Request):
             raise HTTPException(status_code=404, detail="No ClawHub skill available")
         content = ch_data["skill_md"]
         source = job.result.get("source_filename", "")
-        safe_name = source or re.sub(r'[^\w\-.]', '_', ch_data["skill_name"])[:100] or "skill"
+        safe_name = source or safe_filename(ch_data["skill_name"])[:100] or "skill"
         filename = f"{safe_name}_clawhub_SKILL.md"
         media_type = "text/markdown"
     else:

@@ -301,3 +301,12 @@ class MethodologyExtraction(BaseModel):
         if v is None or v == "":
             return []
         return v
+
+    def has_content(self) -> bool:
+        """Return True if any methodology sections have been populated."""
+        return bool(
+            self.heuristics
+            or self.trigger_mappings
+            or self.output_templates
+            or self.quality_criteria
+        )

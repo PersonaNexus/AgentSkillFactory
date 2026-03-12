@@ -109,12 +109,14 @@ class GenerateStage(PipelineStage):
         context["identity"] = identity
         context["identity_yaml"] = yaml_str
 
-        skill_gen = SkillFileGenerator()
-        context["skill_file"] = skill_gen.generate(
-            context["extraction"], jd=context.get("jd")
-        )
+        # Reference skill file (used by all output formats)
+        if output_format != "clawhub":
+            skill_gen = SkillFileGenerator()
+            context["skill_file"] = skill_gen.generate(
+                context["extraction"], jd=context.get("jd")
+            )
 
-        # Claude Code skill folder (always generated — used by reference SKILL.md too)
+        # Claude Code skill folder
         if output_format in ("claude_code", "both"):
             skill_folder_gen = SkillFolderGenerator()
             context["skill_folder"] = skill_folder_gen.generate(
@@ -135,18 +137,6 @@ class GenerateStage(PipelineStage):
                 context["extraction"],
                 jd=context.get("jd"),
                 methodology=context.get("methodology"),
-            )
-
-        # If only ClawHub requested, copy it to skill_folder for backward compat
-        if output_format == "clawhub" and "skill_folder" not in context:
-            skill_folder_gen = SkillFolderGenerator()
-            context["skill_folder"] = skill_folder_gen.generate(
-                context["extraction"],
-                identity,
-                jd=context.get("jd"),
-                methodology=context.get("methodology"),
-                user_examples=context.get("user_examples", ""),
-                user_frameworks=context.get("user_frameworks", ""),
             )
 
         return context
