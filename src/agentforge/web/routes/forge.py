@@ -21,6 +21,7 @@ _ALLOWED_EXTENSIONS = {".txt", ".md", ".markdown", ".pdf", ".docx"}
 _STAGE_MESSAGES = {
     "ingest": "Parsing file...",
     "extract": "Extracting skills via LLM...",
+    "methodology": "Extracting methodology & decision frameworks...",
     "map": "Mapping personality traits...",
     "culture": "Applying culture profile...",
     "generate": "Generating agent identity...",
@@ -42,6 +43,8 @@ def _run_forge(
     culture_path: Path | None,
     original_filename: str = "",
     trait_overrides: dict[str, float] | None = None,
+    user_examples: str = "",
+    user_frameworks: str = "",
 ) -> None:
     """Worker thread: runs the forge pipeline and emits SSE events."""
     try:
@@ -80,6 +83,10 @@ def _run_forge(
             context["culture_path"] = str(culture_path)
         if trait_overrides:
             context["trait_overrides"] = trait_overrides
+        if user_examples:
+            context["user_examples"] = user_examples
+        if user_frameworks:
+            context["user_frameworks"] = user_frameworks
 
         context = pipeline.run(context)
         blueprint = pipeline.to_blueprint(context)
@@ -127,6 +134,8 @@ async def start_forge(
     model: str = Form("claude-sonnet-4-20250514"),
     culture_file: UploadFile | None = File(None),
     trait_overrides: str = Form(""),
+    user_examples: str = Form(""),
+    user_frameworks: str = Form(""),
 ) -> dict:
     """Start a forge pipeline job. Returns a job_id for SSE streaming."""
     filename = file.filename or "upload.txt"
@@ -174,7 +183,8 @@ async def start_forge(
 
     thread = threading.Thread(
         target=_run_forge,
-        args=(job, file_path, mode, model, culture_path, filename, parsed_traits),
+        args=(job, file_path, mode, model, culture_path, filename, parsed_traits,
+              user_examples, user_frameworks),
         daemon=True,
     )
     thread.start()

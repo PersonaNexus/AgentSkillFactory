@@ -172,6 +172,26 @@
                             <input type="hidden" name="trait_overrides" id="trait-overrides-input" value="">
                         </div>
 
+                        <!-- Enhance Quality -->
+                        <details class="config-enhance">
+                            <summary>Enhance Skill Quality <span class="info-icon" title="Providing real-world examples and frameworks dramatically improves the generated skill. Without these, the pipeline infers methodology from the JD alone &mdash; which produces generic workflows instead of expert decision-making rules.">&#9432;</span></summary>
+                            <div class="enhance-quality-section">
+                                <div class="enhance-field">
+                                    <label class="config-label" title="Paste a real work sample, describe how you actually approach a typical task, or share a before/after example. This grounds the skill in actual practice rather than JD abstractions.">Real-World Examples <span class="info-icon">&#9432;</span></label>
+                                    <textarea name="user_examples" rows="4" placeholder="e.g. When I evaluate a new codebase, I start by checking open issues sorted by reactions, then cross-reference with release notes to see what's already addressed. I categorize gaps by severity and effort before recommending changes..."></textarea>
+                                    <small class="config-hint">How do you actually do this job? Describe your real workflow, paste a work sample, or share decision criteria you use</small>
+                                </div>
+                                <div class="enhance-field">
+                                    <label class="config-label" title="List the specific frameworks, templates, checklists, or methodologies used in this role. These become concrete output templates in the generated skill.">Frameworks &amp; Methodologies <span class="info-icon">&#9432;</span></label>
+                                    <textarea name="user_frameworks" rows="4" placeholder="e.g. We use Architecture Decision Records (ADRs) for design choices, RICE scoring for prioritization, and a custom code review checklist that checks for security, performance, maintainability, and test coverage..."></textarea>
+                                    <small class="config-hint">What templates, checklists, or frameworks does this role use? These become output scaffolds in the skill</small>
+                                </div>
+                                <div class="enhance-notice">
+                                    <small>&#9432; Without examples and frameworks, the skill builder infers methodology from the job description alone. The result will have generic workflows instead of expert decision-making rules. Providing even brief inputs here significantly improves quality.</small>
+                                </div>
+                            </div>
+                        </details>
+
                         <details class="config-advanced">
                             <summary>Advanced Options</summary>
                             <div class="config-grid">

@@ -101,7 +101,7 @@ class TestSkillMdBody:
         generator = SkillFolderGenerator()
         result = generator.generate(sample_extraction, sample_identity)
 
-        assert "## Identity & Personality" in result.skill_md
+        assert "## Identity" in result.skill_md
         assert "senior" in result.skill_md
         assert "Data Engineering" in result.skill_md
 
@@ -124,7 +124,7 @@ class TestSkillMdBody:
         generator = SkillFolderGenerator()
         result = generator.generate(sample_extraction, sample_identity)
 
-        assert "### Communication Style" in result.skill_md
+        assert "Communication style" in result.skill_md
         assert "precise and straightforward" in result.skill_md
 
     def test_has_core_competencies(self, sample_extraction, sample_identity):
@@ -253,7 +253,7 @@ class TestMinimalExtraction:
         generator = SkillFolderGenerator()
         result = generator.generate(extraction, identity)
 
-        assert "## Identity & Personality" in result.skill_md
+        assert "## Identity" in result.skill_md
         # No personality modifiers when no traits defined
         assert "### Personality Modifiers" not in result.skill_md
 

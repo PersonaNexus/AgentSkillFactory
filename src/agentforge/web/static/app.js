@@ -779,9 +779,9 @@ document.getElementById('extract-form').addEventListener('submit', async (e) => 
 
 // ========== FORGE WIZARD ==========
 const FORGE_STAGE_LABELS = {
-    ingest: 'Parsing file', extract: 'Extracting skills', map: 'Mapping traits',
-    culture: 'Applying culture', generate: 'Generating skill', analyze: 'Running gap analysis',
-    deep_analyze: 'Running deep analysis', team_compose: 'Composing agent team'
+    ingest: 'Parsing file', extract: 'Extracting skills', methodology: 'Extracting methodology',
+    map: 'Mapping traits', culture: 'Applying culture', generate: 'Generating skill',
+    analyze: 'Running gap analysis', deep_analyze: 'Running deep analysis', team_compose: 'Composing agent team'
 };
 
 // Wizard step navigation
@@ -909,7 +909,7 @@ function updateTraitOverridesInput() {
 
 function initForgeStages(mode) {
     const container = document.getElementById('forge-stages');
-    let stages = ['ingest', 'extract'];
+    let stages = ['ingest', 'extract', 'methodology'];
     if (mode === 'default') stages.push('map', 'culture', 'generate', 'analyze', 'team_compose');
     else if (mode === 'deep') stages.push('map', 'culture', 'generate', 'deep_analyze', 'team_compose');
     else stages.push('generate', 'team_compose');

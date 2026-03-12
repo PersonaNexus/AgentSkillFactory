@@ -65,6 +65,25 @@ class MapStage(PipelineStage):
         return context
 
 
+class MethodologyStage(PipelineStage):
+    """Extract actionable methodology (heuristics, templates, trigger mappings, rubrics)."""
+
+    name = "methodology"
+
+    def run(self, context: dict[str, Any]) -> dict[str, Any]:
+        from agentforge.extraction.methodology_extractor import MethodologyExtractor
+
+        extractor = context.get("methodology_extractor") or MethodologyExtractor(
+            client=context.get("llm_client")
+        )
+        context["methodology"] = extractor.extract(
+            extraction=context["extraction"],
+            user_examples=context.get("user_examples", ""),
+            user_frameworks=context.get("user_frameworks", ""),
+        )
+        return context
+
+
 class GenerateStage(PipelineStage):
     """Generate PersonaNexus AgentIdentity, SKILL.md, and skill folder."""
 
@@ -95,7 +114,12 @@ class GenerateStage(PipelineStage):
 
         skill_folder_gen = SkillFolderGenerator()
         context["skill_folder"] = skill_folder_gen.generate(
-            context["extraction"], identity, jd=context.get("jd")
+            context["extraction"],
+            identity,
+            jd=context.get("jd"),
+            methodology=context.get("methodology"),
+            user_examples=context.get("user_examples", ""),
+            user_frameworks=context.get("user_frameworks", ""),
         )
 
         return context

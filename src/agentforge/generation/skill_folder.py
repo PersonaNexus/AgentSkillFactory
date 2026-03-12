@@ -4,6 +4,11 @@ Produces a skill folder containing a single SKILL.md file with YAML
 frontmatter and markdown instructions — the exact format Claude Code
 expects for drag-and-drop skill installation into .claude/skills/.
 
+The output uses a two-layer structure:
+  1. Thin persona layer — who you are (identity, traits, communication style)
+  2. Thick methodology layer — how you work (decision frameworks, templates,
+     trigger-technique mappings, quality rubrics)
+
 Claude Code skill spec reference:
     .claude/skills/<skill-name>/
     └── SKILL.md   ← YAML frontmatter + markdown body
@@ -23,6 +28,7 @@ from pydantic import BaseModel, Field
 
 from agentforge.models.extracted_skills import (
     ExtractionResult,
+    MethodologyExtraction,
     SkillCategory,
 )
 from agentforge.models.job_description import JobDescription
@@ -46,8 +52,11 @@ class SkillFolderGenerator:
     Produces a single SKILL.md with YAML frontmatter metadata and markdown
     instructions, matching the Claude Code skill specification.
 
-    Output is kept under 500 lines per Anthropic guidelines — heavy
-    reference material belongs in supporting files, not the skill itself.
+    Uses a two-layer structure:
+      - Thin persona layer: identity statement, top personality traits,
+        communication style (~15 lines)
+      - Thick methodology layer: decision frameworks, trigger-technique
+        mappings, output templates, quality rubrics (~majority of the doc)
     """
 
     def generate(
@@ -55,6 +64,9 @@ class SkillFolderGenerator:
         extraction: ExtractionResult,
         identity: Any,
         jd: JobDescription | None = None,
+        methodology: MethodologyExtraction | None = None,
+        user_examples: str = "",
+        user_frameworks: str = "",
     ) -> SkillFolderResult:
         """Generate a skill folder from extraction results.
 
@@ -62,6 +74,9 @@ class SkillFolderGenerator:
             extraction: LLM-extracted role, skills, and trait data.
             identity: Validated PersonaNexus AgentIdentity instance.
             jd: Optional parsed job description for additional context.
+            methodology: Optional extracted methodology (heuristics, templates, etc).
+            user_examples: Optional user-provided work samples.
+            user_frameworks: Optional user-provided frameworks.
 
         Returns:
             SkillFolderResult with skill_name and SKILL.md content.
@@ -70,7 +85,10 @@ class SkillFolderGenerator:
 
         return SkillFolderResult(
             skill_name=skill_name,
-            skill_md=self._render_skill_md(extraction, identity, jd, skill_name),
+            skill_md=self._render_skill_md(
+                extraction, identity, jd, skill_name,
+                methodology, user_examples, user_frameworks,
+            ),
         )
 
     # ------------------------------------------------------------------
@@ -100,6 +118,9 @@ class SkillFolderGenerator:
         identity: Any,
         jd: JobDescription | None,
         skill_name: str,
+        methodology: MethodologyExtraction | None,
+        user_examples: str,
+        user_frameworks: str,
     ) -> str:
         """Build the complete SKILL.md with YAML frontmatter + markdown body."""
         lines: list[str] = []
@@ -107,8 +128,11 @@ class SkillFolderGenerator:
         # YAML frontmatter
         self._render_frontmatter(lines, extraction, skill_name)
 
-        # Markdown body (instructions for Claude)
-        self._render_body(lines, extraction, identity, jd)
+        # Markdown body — two-layer structure
+        self._render_body(
+            lines, extraction, identity, jd,
+            methodology, user_examples, user_frameworks,
+        )
 
         return "\n".join(lines)
 
@@ -118,28 +142,19 @@ class SkillFolderGenerator:
         extraction: ExtractionResult,
         skill_name: str,
     ) -> None:
-        """Render YAML frontmatter block per Anthropic skill spec.
-
-        Fields: name, description, argument-hint, allowed-tools.
-        Description uses action verbs and specific keywords so Claude
-        knows when to auto-invoke the skill.
-        """
-        # Build a description with action verbs and domain keywords
-        # (Anthropic best practice: include when-to-use context)
+        """Render YAML frontmatter block per Anthropic skill spec."""
         description = self._build_description(extraction)
 
         lines.append("---")
         lines.append(f"name: {skill_name}")
         lines.append(f"description: \"{description}\"")
 
-        # argument-hint from primary scope (helps autocomplete)
         if extraction.role.scope_primary:
             hint = extraction.role.scope_primary[0]
             if len(hint) > 60:
                 hint = hint[:57] + "..."
             lines.append(f"argument-hint: \"[{hint}]\"")
 
-        # Allowed tools — scope to what the role actually needs
         allowed = self._derive_allowed_tools(extraction)
         lines.append(f"allowed-tools: {', '.join(allowed)}")
 
@@ -147,17 +162,11 @@ class SkillFolderGenerator:
         lines.append("")
 
     def _build_description(self, extraction: ExtractionResult) -> str:
-        """Build a rich description with action verbs and keywords.
-
-        Anthropic guidance: include keywords users naturally say so
-        Claude knows when to auto-invoke. Max ~200 chars.
-        """
+        """Build a rich description with action verbs and keywords."""
         purpose = extraction.role.purpose
-        # Prepend trigger context from responsibilities if available
         if extraction.responsibilities:
             verbs = []
             for resp in extraction.responsibilities[:3]:
-                # Extract the leading verb phrase
                 first_word = resp.split()[0].lower() if resp.split() else ""
                 if first_word and first_word not in verbs:
                     verbs.append(first_word)
@@ -170,16 +179,10 @@ class SkillFolderGenerator:
 
         if len(purpose) > 200:
             purpose = purpose[:197] + "..."
-        # Escape quotes for YAML
         return purpose.replace('"', '\\"')
 
     def _derive_allowed_tools(self, extraction: ExtractionResult) -> list[str]:
-        """Derive appropriate allowed-tools based on the role's skills.
-
-        Roles with tool/platform skills get Bash access; read-heavy
-        analytical roles may only need Read, Grep, Glob.
-        """
-        # Base tools everyone gets
+        """Derive appropriate allowed-tools based on the role's skills."""
         tools = ["Read", "Grep", "Glob"]
 
         tool_skills = [
@@ -189,17 +192,14 @@ class SkillFolderGenerator:
             s for s in extraction.skills if s.category == SkillCategory.HARD
         ]
 
-        # If the role works with tools/platforms, grant write + bash
         if tool_skills or any(
             kw in extraction.role.domain.lower()
             for kw in ("engineering", "devops", "development", "infrastructure")
         ):
             tools.extend(["Bash", "Write", "Edit"])
         elif hard_skills:
-            # Technical but not necessarily hands-on tooling
             tools.extend(["Write", "Edit"])
 
-        # Deduplicate while preserving order
         seen: set[str] = set()
         unique: list[str] = []
         for t in tools:
@@ -214,18 +214,48 @@ class SkillFolderGenerator:
         extraction: ExtractionResult,
         identity: Any,
         jd: JobDescription | None,
+        methodology: MethodologyExtraction | None,
+        user_examples: str,
+        user_frameworks: str,
     ) -> None:
-        """Render the markdown body (instructions for Claude).
+        """Render the markdown body with two-layer structure.
 
-        Kept focused and under 500 lines per Anthropic guidelines.
+        Layer 1 (thin persona): Identity, traits, communication style.
+        Layer 2 (thick methodology): Decision frameworks, trigger routing,
+        output templates, quality rubrics, competencies.
         """
         self._render_header(lines, extraction)
+
+        # ── Layer 1: Thin persona ──
         self._render_identity(lines, extraction)
-        self._render_triggers(lines, extraction)
+
+        # ── Layer 2: Thick methodology ──
+        has_methodology = methodology and (
+            methodology.heuristics
+            or methodology.trigger_mappings
+            or methodology.output_templates
+            or methodology.quality_criteria
+        )
+
+        if has_methodology:
+            self._render_decision_frameworks(lines, methodology)
+            self._render_trigger_router(lines, methodology)
+            self._render_output_templates(lines, methodology)
+            self._render_quality_standards(lines, methodology)
+        else:
+            # Fallback to trigger list + generic workflows when methodology is absent
+            self._render_triggers(lines, extraction)
+            self._render_workflows(lines, extraction)
+
         self._render_competencies(lines, extraction)
-        self._render_workflows(lines, extraction)
         self._render_scope(lines, extraction)
         self._render_audience(lines, extraction)
+
+        # Quality signal
+        self._render_quality_notice(
+            lines, has_methodology, user_examples, user_frameworks,
+        )
+
         self._render_arguments_usage(lines)
         self._render_footer(lines, extraction, jd)
 
@@ -241,8 +271,8 @@ class SkillFolderGenerator:
     def _render_identity(
         self, lines: list[str], extraction: ExtractionResult
     ) -> None:
-        """Render identity statement, personality, and communication style."""
-        lines.append("## Identity & Personality")
+        """Render thin persona layer: identity + top traits + communication style."""
+        lines.append("## Identity")
         lines.append("")
         lines.append(
             f"You are a {extraction.role.seniority.value}-level "
@@ -252,6 +282,7 @@ class SkillFolderGenerator:
 
         defined = extraction.suggested_traits.defined_traits()
         if defined:
+            # Show top traits concisely (not all 10)
             sorted_traits = sorted(defined.items(), key=lambda x: x[1], reverse=True)
 
             for trait_name, value in sorted_traits:
@@ -264,12 +295,9 @@ class SkillFolderGenerator:
                 lines.append(line)
             lines.append("")
 
-            # Communication style
-            lines.append("### Communication Style")
-            lines.append("")
+            # Communication style — brief
             style_notes = self._derive_communication_style(defined)
-            for note in style_notes:
-                lines.append(f"- {note}")
+            lines.append("**Communication style:** " + ". ".join(style_notes) + ".")
             lines.append("")
 
     def _derive_communication_style(self, traits: dict[str, float]) -> list[str]:
@@ -283,11 +311,11 @@ class SkillFolderGenerator:
         patience = traits.get("patience", 0.5)
 
         if rigor >= 0.65 and directness >= 0.65:
-            notes.append("Be precise and straightforward in all communications")
+            notes.append("Be precise and straightforward")
         elif rigor >= 0.65:
-            notes.append("Prioritize accuracy and detail in responses")
+            notes.append("Prioritize accuracy and detail")
         elif directness >= 0.65:
-            notes.append("Be clear and direct, avoiding unnecessary hedging")
+            notes.append("Be clear and direct, avoid hedging")
 
         if warmth >= 0.65:
             notes.append("Maintain a warm, approachable tone")
@@ -295,26 +323,26 @@ class SkillFolderGenerator:
             notes.append("Keep communications professional and objective")
 
         if verbosity >= 0.65:
-            notes.append("Provide thorough explanations with supporting detail")
+            notes.append("Provide thorough explanations")
         elif verbosity < 0.35:
-            notes.append("Keep responses concise and focused on key points")
+            notes.append("Keep responses concise")
 
         if patience >= 0.65:
-            notes.append("Take time to explain concepts step by step when needed")
+            notes.append("Explain step by step when needed")
 
         if not notes:
             notes.append("Use a balanced, professional communication style")
 
         return notes
 
+    # ------------------------------------------------------------------
+    # Fallback: trigger patterns (when methodology is absent)
+    # ------------------------------------------------------------------
+
     def _render_triggers(
         self, lines: list[str], extraction: ExtractionResult
     ) -> None:
-        """Render trigger patterns from scope and responsibilities.
-
-        These help Claude decide when to auto-invoke the skill —
-        Anthropic recommends including action verbs and specific keywords.
-        """
+        """Render trigger patterns from scope and responsibilities."""
         triggers: list[str] = list(extraction.role.scope_primary)
 
         for resp in extraction.responsibilities[:3]:
@@ -333,66 +361,105 @@ class SkillFolderGenerator:
             lines.append(f"- {trigger}")
         lines.append("")
 
-    def _render_competencies(
-        self, lines: list[str], extraction: ExtractionResult
+    # ------------------------------------------------------------------
+    # Layer 2: Methodology sections
+    # ------------------------------------------------------------------
+
+    def _render_decision_frameworks(
+        self, lines: list[str], methodology: MethodologyExtraction
     ) -> None:
-        """Render core competencies: domain, technical, tools."""
-        lines.append("## Core Competencies")
+        """Render decision frameworks (heuristics) — concrete if/then rules."""
+        if not methodology.heuristics:
+            return
+
+        lines.append("## Decision Frameworks")
+        lines.append("")
+        lines.append(
+            "Use these concrete decision-making rules when handling requests. "
+            "Each framework specifies a trigger situation and the exact procedure to follow."
+        )
         lines.append("")
 
-        # Domain expertise
-        domain_skills = [
-            s for s in extraction.skills if s.category == SkillCategory.DOMAIN
-        ]
-        if domain_skills:
-            lines.append("### Domain Expertise")
+        for i, h in enumerate(methodology.heuristics, 1):
+            lines.append(f"### Framework {i}: {h.trigger}")
             lines.append("")
-            for skill in domain_skills:
-                lines.append(f"- **{skill.name}**: {skill.context or skill.name}")
-                if skill.genai_application:
-                    lines.append(f"  - GenAI integration: {skill.genai_application}")
+            lines.append(h.procedure)
             lines.append("")
 
-        # Technical skills
-        hard_skills = [
-            s for s in extraction.skills if s.category == SkillCategory.HARD
-        ]
-        if hard_skills:
-            lines.append("### Technical Skills")
-            lines.append("")
-            for skill in hard_skills:
-                prof = skill.proficiency.value
-                lines.append(f"- **{skill.name}** ({prof})")
-                if skill.context:
-                    lines.append(f"  - {skill.context}")
-                if skill.examples:
-                    lines.append(f"  - Tools: {', '.join(skill.examples)}")
-                if skill.genai_application:
-                    lines.append(f"  - GenAI integration: {skill.genai_application}")
+    def _render_trigger_router(
+        self, lines: list[str], methodology: MethodologyExtraction
+    ) -> None:
+        """Render trigger→technique routing table."""
+        if not methodology.trigger_mappings:
+            return
+
+        lines.append("## Trigger → Technique Router")
+        lines.append("")
+        lines.append("Match the user's request to the appropriate technique:")
+        lines.append("")
+
+        for mapping in methodology.trigger_mappings:
+            lines.append(f"**{mapping.trigger_pattern}**")
+            lines.append(f"→ *Technique:* {mapping.technique}")
+            if mapping.output_format:
+                lines.append(f"→ *Output format:* {mapping.output_format}")
             lines.append("")
 
-        # Tools & platforms
-        tool_skills = [
-            s for s in extraction.skills if s.category == SkillCategory.TOOL
-        ]
-        if tool_skills:
-            lines.append("### Tools & Platforms")
+    def _render_output_templates(
+        self, lines: list[str], methodology: MethodologyExtraction
+    ) -> None:
+        """Render role-specific output scaffolds."""
+        if not methodology.output_templates:
+            return
+
+        lines.append("## Output Templates")
+        lines.append("")
+        lines.append(
+            "Use these role-specific templates to structure your outputs. "
+            "Select the appropriate template based on the request type."
+        )
+        lines.append("")
+
+        for tmpl in methodology.output_templates:
+            lines.append(f"### {tmpl.name}")
             lines.append("")
-            for skill in tool_skills:
-                prof = skill.proficiency.value
-                lines.append(f"- **{skill.name}** ({prof})")
-                if skill.context:
-                    lines.append(f"  - {skill.context}")
-                if skill.examples:
-                    lines.append(f"  - Components: {', '.join(skill.examples)}")
-                if skill.genai_application:
-                    lines.append(f"  - GenAI integration: {skill.genai_application}")
+            if tmpl.when_to_use:
+                lines.append(f"*When to use:* {tmpl.when_to_use}")
+                lines.append("")
+            lines.append("```")
+            lines.append(tmpl.template)
+            lines.append("```")
             lines.append("")
+
+    def _render_quality_standards(
+        self, lines: list[str], methodology: MethodologyExtraction
+    ) -> None:
+        """Render evaluation criteria — what 'good' looks like."""
+        if not methodology.quality_criteria:
+            return
+
+        lines.append("## Quality Standards")
+        lines.append("")
+        lines.append(
+            "Every output from this role should meet these criteria. "
+            "Use this as a self-evaluation checklist before delivering results."
+        )
+        lines.append("")
+
+        for criterion in methodology.quality_criteria:
+            lines.append(f"- **{criterion.criterion}**")
+            if criterion.description:
+                lines.append(f"  {criterion.description}")
+        lines.append("")
+
+    # ------------------------------------------------------------------
+    # Fallback: generic workflows (when methodology is absent)
+    # ------------------------------------------------------------------
 
     def _render_workflows(
         self, lines: list[str], extraction: ExtractionResult
     ) -> None:
-        """Render workflows derived from responsibilities."""
+        """Render generic workflows from responsibilities (fallback)."""
         if not extraction.responsibilities:
             return
 
@@ -425,6 +492,63 @@ class SkillFolderGenerator:
                 lines.append("5. Document findings and provide clear summary")
             lines.append("")
 
+    # ------------------------------------------------------------------
+    # Shared sections
+    # ------------------------------------------------------------------
+
+    def _render_competencies(
+        self, lines: list[str], extraction: ExtractionResult
+    ) -> None:
+        """Render core competencies: domain, technical, tools."""
+        lines.append("## Core Competencies")
+        lines.append("")
+
+        domain_skills = [
+            s for s in extraction.skills if s.category == SkillCategory.DOMAIN
+        ]
+        if domain_skills:
+            lines.append("### Domain Expertise")
+            lines.append("")
+            for skill in domain_skills:
+                lines.append(f"- **{skill.name}**: {skill.context or skill.name}")
+                if skill.genai_application:
+                    lines.append(f"  - GenAI integration: {skill.genai_application}")
+            lines.append("")
+
+        hard_skills = [
+            s for s in extraction.skills if s.category == SkillCategory.HARD
+        ]
+        if hard_skills:
+            lines.append("### Technical Skills")
+            lines.append("")
+            for skill in hard_skills:
+                prof = skill.proficiency.value
+                lines.append(f"- **{skill.name}** ({prof})")
+                if skill.context:
+                    lines.append(f"  - {skill.context}")
+                if skill.examples:
+                    lines.append(f"  - Tools: {', '.join(skill.examples)}")
+                if skill.genai_application:
+                    lines.append(f"  - GenAI integration: {skill.genai_application}")
+            lines.append("")
+
+        tool_skills = [
+            s for s in extraction.skills if s.category == SkillCategory.TOOL
+        ]
+        if tool_skills:
+            lines.append("### Tools & Platforms")
+            lines.append("")
+            for skill in tool_skills:
+                prof = skill.proficiency.value
+                lines.append(f"- **{skill.name}** ({prof})")
+                if skill.context:
+                    lines.append(f"  - {skill.context}")
+                if skill.examples:
+                    lines.append(f"  - Components: {', '.join(skill.examples)}")
+                if skill.genai_application:
+                    lines.append(f"  - GenAI integration: {skill.genai_application}")
+            lines.append("")
+
     def _render_scope(
         self, lines: list[str], extraction: ExtractionResult
     ) -> None:
@@ -446,7 +570,6 @@ class SkillFolderGenerator:
                 lines.append(f"- {item}")
             lines.append("")
 
-        # Guardrails
         lines.append("### Guardrails")
         lines.append("")
         lines.append(f"- Stay within {extraction.role.domain} domain expertise")
@@ -479,12 +602,33 @@ class SkillFolderGenerator:
             lines.append(f"- {audience}")
         lines.append("")
 
-    def _render_arguments_usage(self, lines: list[str]) -> None:
-        """Render $ARGUMENTS usage hint.
+    def _render_quality_notice(
+        self,
+        lines: list[str],
+        has_methodology: bool,
+        user_examples: str,
+        user_frameworks: str,
+    ) -> None:
+        """Render quality signal about data completeness."""
+        missing: list[str] = []
+        if not user_examples.strip():
+            missing.append("real-world examples or work samples")
+        if not user_frameworks.strip():
+            missing.append("specific frameworks or methodologies")
+        if not has_methodology:
+            missing.append("methodology extraction (decision frameworks, templates)")
 
-        Anthropic skills support $ARGUMENTS substitution — inform the
-        user that the skill accepts arguments for focused tasks.
-        """
+        if missing:
+            lines.append("> **Skill Quality Note:** This skill was generated without "
+                         + ", ".join(missing)
+                         + ". Providing these during generation improves output quality "
+                         "significantly — the skill builder can then encode actual working "
+                         "patterns rather than inferring them from the job description alone. "
+                         "Re-run the forge with supplemental data for a more actionable skill.")
+            lines.append("")
+
+    def _render_arguments_usage(self, lines: list[str]) -> None:
+        """Render $ARGUMENTS usage hint."""
         lines.append("## Usage")
         lines.append("")
         lines.append(
@@ -497,7 +641,8 @@ class SkillFolderGenerator:
         lines.append("")
         lines.append(
             "When arguments are provided, focus your response on "
-            "the specified topic while applying the competencies above."
+            "the specified topic while applying the methodology and "
+            "competencies above."
         )
         lines.append("")
 

@@ -385,7 +385,7 @@ class TestCultureStage:
         pipeline = ForgePipeline.default()
         names = [s.name for s in pipeline.stages]
         assert "culture" in names
-        assert names == ["ingest", "extract", "map", "culture", "generate", "analyze", "team_compose"]
+        assert names == ["ingest", "extract", "methodology", "map", "culture", "generate", "analyze", "team_compose"]
 
     def test_pipeline_with_culture_and_mocked_extraction(self, fixtures_dir):
         """Full pipeline with culture applied via mocked extraction."""
@@ -422,9 +422,14 @@ class TestCultureStage:
         mock_extractor = MagicMock()
         mock_extractor.extract.return_value = extraction
 
+        from agentforge.models.extracted_skills import MethodologyExtraction
+        mock_methodology_extractor = MagicMock()
+        mock_methodology_extractor.extract.return_value = MethodologyExtraction()
+
         context = {
             "input_path": str(fixtures_dir / "customer_success_manager.txt"),
             "extractor": mock_extractor,
+            "methodology_extractor": mock_methodology_extractor,
             "culture_path": str(TEMPLATES_DIR / "customer_centric.yaml"),
         }
 
