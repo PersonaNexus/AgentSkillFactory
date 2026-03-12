@@ -5,6 +5,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+# Pre-compiled patterns for slug generation
+_RE_MULTI_HYPHEN = re.compile(r"-+")
+_RE_LEADING_NON_ALNUM = re.compile(r"^[^a-z0-9]+")
+
 
 def safe_filename(name: str) -> str:
     """Sanitize a string for use as a filename, preventing path traversal.
@@ -20,6 +24,33 @@ def safe_filename(name: str) -> str:
     name = re.sub(r"_+", "_", name).strip("_")
     # Fallback if empty
     return name or "unnamed_agent"
+
+
+def make_skill_slug(title: str, *, strip_leading: bool = False, max_len: int = 64) -> str:
+    """Derive a skill slug from a role title.
+
+    Produces lowercase-hyphenated names like 'senior-data-engineer'.
+
+    Args:
+        title: The role title to slugify.
+        strip_leading: If True, strip leading non-alphanumeric characters
+                       (required for ClawHub ^[a-z0-9] format).
+        max_len: Maximum slug length (default 64 per spec).
+    """
+    raw = safe_filename(title).lower().replace("_", "-")
+    raw = _RE_MULTI_HYPHEN.sub("-", raw).strip("-")
+    if strip_leading:
+        raw = _RE_LEADING_NON_ALNUM.sub("", raw)
+    if len(raw) > max_len:
+        raw = raw[:max_len].rstrip("-")
+    return raw or "generated-skill"
+
+
+def truncate_description(text: str, max_len: int = 200) -> str:
+    """Truncate a description string with ellipsis if needed."""
+    if len(text) > max_len:
+        return text[:max_len - 3] + "..."
+    return text
 
 
 def safe_output_path(output_dir: Path, filename: str) -> Path:

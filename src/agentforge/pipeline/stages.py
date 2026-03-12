@@ -65,6 +65,25 @@ class MapStage(PipelineStage):
         return context
 
 
+class MethodologyStage(PipelineStage):
+    """Extract actionable methodology (heuristics, templates, trigger mappings, rubrics)."""
+
+    name = "methodology"
+
+    def run(self, context: dict[str, Any]) -> dict[str, Any]:
+        from agentforge.extraction.methodology_extractor import MethodologyExtractor
+
+        extractor = context.get("methodology_extractor") or MethodologyExtractor(
+            client=context.get("llm_client")
+        )
+        context["methodology"] = extractor.extract(
+            extraction=context["extraction"],
+            user_examples=context.get("user_examples", ""),
+            user_frameworks=context.get("user_frameworks", ""),
+        )
+        return context
+
+
 class GenerateStage(PipelineStage):
     """Generate PersonaNexus AgentIdentity, SKILL.md, and skill folder."""
 
@@ -75,20 +94,50 @@ class GenerateStage(PipelineStage):
         from agentforge.generation.skill_file import SkillFileGenerator
         from agentforge.generation.skill_folder import SkillFolderGenerator
 
+        output_format = context.get("output_format", "claude_code")
+
+        # Apply user trait overrides to extraction before generating
+        trait_overrides = context.get("trait_overrides")
+        if trait_overrides:
+            extraction = context["extraction"]
+            for trait_name, value in trait_overrides.items():
+                if hasattr(extraction.suggested_traits, trait_name):
+                    setattr(extraction.suggested_traits, trait_name, value)
+
         generator = context.get("identity_generator") or IdentityGenerator()
         identity, yaml_str = generator.generate(context["extraction"])
         context["identity"] = identity
         context["identity_yaml"] = yaml_str
 
-        skill_gen = SkillFileGenerator()
-        context["skill_file"] = skill_gen.generate(
-            context["extraction"], jd=context.get("jd")
-        )
+        # Reference skill file (used by all output formats)
+        if output_format != "clawhub":
+            skill_gen = SkillFileGenerator()
+            context["skill_file"] = skill_gen.generate(
+                context["extraction"], jd=context.get("jd")
+            )
 
-        skill_folder_gen = SkillFolderGenerator()
-        context["skill_folder"] = skill_folder_gen.generate(
-            context["extraction"], identity, jd=context.get("jd")
-        )
+        # Claude Code skill folder
+        if output_format in ("claude_code", "both"):
+            skill_folder_gen = SkillFolderGenerator()
+            context["skill_folder"] = skill_folder_gen.generate(
+                context["extraction"],
+                identity,
+                jd=context.get("jd"),
+                methodology=context.get("methodology"),
+                user_examples=context.get("user_examples", ""),
+                user_frameworks=context.get("user_frameworks", ""),
+            )
+
+        # ClawHub skill
+        if output_format in ("clawhub", "both"):
+            from agentforge.generation.clawhub_skill import ClawHubSkillGenerator
+
+            clawhub_gen = ClawHubSkillGenerator()
+            context["clawhub_skill"] = clawhub_gen.generate(
+                context["extraction"],
+                jd=context.get("jd"),
+                methodology=context.get("methodology"),
+            )
 
         return context
 

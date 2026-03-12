@@ -13,6 +13,7 @@ from agentforge.pipeline.stages import (
     GenerateStage,
     IngestStage,
     MapStage,
+    MethodologyStage,
     PipelineStage,
     TeamComposeStage,
 )
@@ -64,10 +65,11 @@ class ForgePipeline:
 
     @classmethod
     def default(cls) -> "ForgePipeline":
-        """Standard pipeline: ingest -> extract -> map -> culture -> generate -> analyze -> team."""
+        """Standard pipeline: ingest -> extract -> methodology -> map -> culture -> generate -> analyze -> team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
         pipeline.add_stage(ExtractStage())
+        pipeline.add_stage(MethodologyStage())
         pipeline.add_stage(MapStage())
         pipeline.add_stage(CultureStage())
         pipeline.add_stage(GenerateStage())
@@ -77,10 +79,11 @@ class ForgePipeline:
 
     @classmethod
     def quick(cls) -> "ForgePipeline":
-        """Minimal pipeline: ingest -> extract -> generate -> team."""
+        """Minimal pipeline: ingest -> extract -> methodology -> generate -> team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
         pipeline.add_stage(ExtractStage())
+        pipeline.add_stage(MethodologyStage())
         pipeline.add_stage(GenerateStage())
         pipeline.add_stage(TeamComposeStage())
         return pipeline
@@ -91,6 +94,7 @@ class ForgePipeline:
         pipeline = cls()
         pipeline.add_stage(IngestStage())
         pipeline.add_stage(ExtractStage())
+        pipeline.add_stage(MethodologyStage())
         pipeline.add_stage(MapStage())
         pipeline.add_stage(CultureStage())
         pipeline.add_stage(GenerateStage())

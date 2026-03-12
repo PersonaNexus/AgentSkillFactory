@@ -217,3 +217,96 @@ class ExtractionResult(BaseModel):
         if v is None:
             return ""
         return v
+
+
+# ---------------------------------------------------------------------------
+# Methodology layer — procedural knowledge for actionable skill output
+# ---------------------------------------------------------------------------
+
+
+class Heuristic(BaseModel):
+    """A concrete decision-making rule derived from a responsibility."""
+
+    trigger: str = Field(..., description="When this situation arises (e.g. 'When evaluating a codebase for enhancements')")
+    procedure: str = Field(..., description="Step-by-step procedure to follow")
+    source_responsibility: str = Field(default="", description="The original responsibility this was derived from")
+
+    @field_validator("source_responsibility", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return v
+
+
+class OutputTemplate(BaseModel):
+    """A role-specific output scaffold or framework."""
+
+    name: str = Field(..., description="Template name (e.g. 'Architecture Decision Record')")
+    when_to_use: str = Field(default="", description="Situation that calls for this template")
+    template: str = Field(..., description="The template content with placeholders")
+
+    @field_validator("when_to_use", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return v
+
+
+class TriggerTechniqueMapping(BaseModel):
+    """Pattern-matched routing: trigger pattern → technique to apply."""
+
+    trigger_pattern: str = Field(..., description="When asked to... (e.g. 'evaluate an open-source project')")
+    technique: str = Field(..., description="The specific approach or framework to use")
+    output_format: str = Field(default="", description="What the output should look like")
+
+    @field_validator("output_format", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return v
+
+
+class QualityCriterion(BaseModel):
+    """A single evaluation criterion for what 'good' looks like."""
+
+    criterion: str = Field(..., description="What to check (e.g. 'Includes quantified impact estimates')")
+    description: str = Field(default="", description="Why this matters and how to satisfy it")
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def coerce_none_str(cls, v: object) -> str:
+        if v is None:
+            return ""
+        return v
+
+
+class MethodologyExtraction(BaseModel):
+    """Procedural knowledge for a role — the 'how you work' layer.
+
+    This is the thick methodology layer that makes skills actionable,
+    as opposed to the thin persona layer (identity, traits).
+    """
+
+    heuristics: list[Heuristic] = Field(default_factory=list)
+    output_templates: list[OutputTemplate] = Field(default_factory=list)
+    trigger_mappings: list[TriggerTechniqueMapping] = Field(default_factory=list)
+    quality_criteria: list[QualityCriterion] = Field(default_factory=list)
+
+    @field_validator("heuristics", "output_templates", "trigger_mappings", "quality_criteria", mode="before")
+    @classmethod
+    def coerce_none_to_list(cls, v: object) -> list:
+        if v is None or v == "":
+            return []
+        return v
+
+    def has_content(self) -> bool:
+        """Return True if any methodology sections have been populated."""
+        return bool(
+            self.heuristics
+            or self.trigger_mappings
+            or self.output_templates
+            or self.quality_criteria
+        )

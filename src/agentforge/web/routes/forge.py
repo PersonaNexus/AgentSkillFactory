@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
-import io
 import json
 import tempfile
 import threading
-import zipfile
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
+from agentforge.utils import safe_filename
 from agentforge.web.jobs import Job, JobStore
 
 router = APIRouter(tags=["forge"])
@@ -22,6 +21,7 @@ _ALLOWED_EXTENSIONS = {".txt", ".md", ".markdown", ".pdf", ".docx"}
 _STAGE_MESSAGES = {
     "ingest": "Parsing file...",
     "extract": "Extracting skills via LLM...",
+    "methodology": "Extracting methodology & decision frameworks...",
     "map": "Mapping personality traits...",
     "culture": "Applying culture profile...",
     "generate": "Generating agent identity...",
@@ -41,11 +41,14 @@ def _run_forge(
     mode: str,
     model: str,
     culture_path: Path | None,
-    no_skill_file: bool,
+    original_filename: str = "",
+    trait_overrides: dict[str, float] | None = None,
+    user_examples: str = "",
+    user_frameworks: str = "",
+    output_format: str = "claude_code",
 ) -> None:
     """Worker thread: runs the forge pipeline and emits SSE events."""
     try:
-        from agentforge.cli import _ingest_file
         from agentforge.llm.client import LLMClient
         from agentforge.pipeline.forge_pipeline import ForgePipeline
 
@@ -79,33 +82,46 @@ def _run_forge(
         }
         if culture_path:
             context["culture_path"] = str(culture_path)
+        if trait_overrides:
+            context["trait_overrides"] = trait_overrides
+        if user_examples:
+            context["user_examples"] = user_examples
+        if user_frameworks:
+            context["user_frameworks"] = user_frameworks
+        context["output_format"] = output_format
 
         context = pipeline.run(context)
         blueprint = pipeline.to_blueprint(context)
 
+        # Derive download name from original uploaded filename
+        stem = Path(original_filename).stem if original_filename else ""
+        download_stem = safe_filename(stem)[:100] if stem else ""
+
         # Build result
+        sf = context.get("skill_folder")
+        ch = context.get("clawhub_skill")
         result: dict[str, Any] = {
-            "blueprint": json.loads(blueprint.model_dump_json()),
+            "blueprint": blueprint.model_dump(mode="json"),
             "identity_yaml": context.get("identity_yaml", ""),
-            "skill_file": context.get("skill_file", "") if not no_skill_file else "",
+            "source_filename": download_stem,
             "traits": context.get("traits"),
             "coverage_score": context.get("coverage_score"),
             "coverage_gaps": context.get("coverage_gaps"),
             "skill_scores": context.get("skill_scores"),
+            "skill_folder": {
+                "skill_md": sf.skill_md,
+                "skill_name": sf.skill_name,
+            } if sf else None,
+            "clawhub_skill": {
+                "skill_md": ch.skill_md,
+                "skill_name": ch.skill_name,
+            } if ch else None,
         }
 
         # Include agent team composition
         agent_team = context.get("agent_team")
         if agent_team:
             result["agent_team"] = agent_team.to_dict()
-
-        # Include skill folder data for download
-        if not no_skill_file and "skill_folder" in context:
-            sf = context["skill_folder"]
-            result["skill_folder"] = {
-                "skill_md": sf.skill_md,
-                "skill_name": sf.skill_name,
-            }
 
         job.emit_done(result)
 
@@ -123,17 +139,38 @@ async def start_forge(
     file: UploadFile = File(...),
     mode: str = Form("default"),
     model: str = Form("claude-sonnet-4-20250514"),
-    no_skill_file: bool = Form(False),
     culture_file: UploadFile | None = File(None),
+    trait_overrides: str = Form(""),
+    user_examples: str = Form(""),
+    user_frameworks: str = Form(""),
+    output_format: str = Form("claude_code"),
 ) -> dict:
     """Start a forge pipeline job. Returns a job_id for SSE streaming."""
     filename = file.filename or "upload.txt"
+
+    # Parse trait overrides (JSON string of {trait_name: float})
+    parsed_traits: dict[str, float] | None = None
+    if trait_overrides:
+        try:
+            raw = json.loads(trait_overrides)
+            parsed_traits = {
+                k: max(0.0, min(1.0, float(v)))
+                for k, v in raw.items()
+                if isinstance(k, str) and v is not None
+            }
+            if not parsed_traits:
+                parsed_traits = None
+        except (json.JSONDecodeError, TypeError, ValueError):
+            parsed_traits = None
     suffix = Path(filename).suffix.lower()
     if suffix not in _ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=422, detail=f"Unsupported file type: {suffix}")
 
     if mode not in ("default", "quick", "deep"):
         raise HTTPException(status_code=422, detail=f"Invalid mode: {mode}")
+
+    if output_format not in ("claude_code", "clawhub", "both"):
+        raise HTTPException(status_code=422, detail=f"Invalid output_format: {output_format}")
 
     # Save uploaded file
     content = await file.read()
@@ -157,7 +194,8 @@ async def start_forge(
 
     thread = threading.Thread(
         target=_run_forge,
-        args=(job, file_path, mode, model, culture_path, no_skill_file),
+        args=(job, file_path, mode, model, culture_path, filename, parsed_traits,
+              user_examples, user_frameworks, output_format),
         daemon=True,
     )
     thread.start()
@@ -205,28 +243,23 @@ async def forge_download(job_id: str, file_type: str, request: Request):
         filename = "agent_identity.yaml"
         media_type = "text/yaml"
     elif file_type == "skill":
-        content = job.result.get("skill_file", "")
-        filename = "SKILL.md"
-        media_type = "text/markdown"
-    elif file_type == "skill-folder":
         sf_data = job.result.get("skill_folder")
         if not sf_data:
-            raise HTTPException(status_code=404, detail="No skill folder available")
-
-        buffer = io.BytesIO()
-        skill_name = sf_data["skill_name"]
-        # Sanitize skill_name: strip path separators and header-injection chars
-        import re
-        safe_name = re.sub(r'[^\w\-.]', '_', skill_name)[:100] or "skill"
-        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.writestr(f"{safe_name}/SKILL.md", sf_data["skill_md"])
-        buffer.seek(0)
-
-        return StreamingResponse(
-            buffer,
-            media_type="application/zip",
-            headers={"Content-Disposition": f'attachment; filename="{safe_name}_skill.zip"'},
-        )
+            raise HTTPException(status_code=404, detail="No skill available")
+        content = sf_data["skill_md"]
+        source = job.result.get("source_filename", "")
+        safe_name = source or safe_filename(sf_data["skill_name"])[:100] or "skill"
+        filename = f"{safe_name}_SKILL.md"
+        media_type = "text/markdown"
+    elif file_type == "clawhub":
+        ch_data = job.result.get("clawhub_skill")
+        if not ch_data:
+            raise HTTPException(status_code=404, detail="No ClawHub skill available")
+        content = ch_data["skill_md"]
+        source = job.result.get("source_filename", "")
+        safe_name = source or safe_filename(ch_data["skill_name"])[:100] or "skill"
+        filename = f"{safe_name}_clawhub_SKILL.md"
+        media_type = "text/markdown"
     else:
         raise HTTPException(status_code=400, detail="Invalid file type")
 

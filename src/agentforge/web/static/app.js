@@ -777,78 +777,190 @@ document.getElementById('extract-form').addEventListener('submit', async (e) => 
     }
 });
 
-// ========== FORGE ==========
-const FORGE_STAGES = ['ingest', 'extract', 'map', 'culture', 'generate', 'analyze', 'deep_analyze', 'team_compose'];
+// ========== FORGE WIZARD ==========
 const FORGE_STAGE_LABELS = {
-    ingest: 'Parse File', extract: 'Extract Skills', map: 'Map Traits',
-    culture: 'Apply Culture', generate: 'Generate Identity', analyze: 'Gap Analysis',
-    deep_analyze: 'Deep Analysis', team_compose: 'Compose Agent Team'
+    ingest: 'Parsing file', extract: 'Extracting skills', methodology: 'Extracting methodology',
+    map: 'Mapping traits', culture: 'Applying culture', generate: 'Generating skill',
+    analyze: 'Running gap analysis', deep_analyze: 'Running deep analysis', team_compose: 'Composing agent team'
 };
+
+// Wizard step navigation
+let _forgeCurrentStep = 1;
+
+function forgeShowStep(step) {
+    _forgeCurrentStep = step;
+    for (let i = 1; i <= 4; i++) {
+        const panel = document.getElementById('forge-step-' + i);
+        if (panel) panel.hidden = (i !== step);
+    }
+    // Update step indicators
+    document.querySelectorAll('.wizard-step').forEach(el => {
+        const s = parseInt(el.dataset.step);
+        el.classList.remove('active', 'done');
+        if (s === step) el.classList.add('active');
+        else if (s < step) el.classList.add('done');
+    });
+}
+
+function initForgeWizard() {
+    // Prevent default form submission (wizard handles it)
+    document.getElementById('forge-form').addEventListener('submit', (e) => e.preventDefault());
+
+    // File input -> dropzone
+    const dropzone = document.getElementById('forge-dropzone');
+    const fileInput = document.getElementById('forge-file-input');
+    const filenameEl = document.getElementById('forge-filename');
+    const nextBtn = document.getElementById('forge-next-1');
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const name = fileInput.files[0].name;
+            filenameEl.textContent = name;
+            filenameEl.hidden = false;
+            dropzone.classList.add('has-file');
+            nextBtn.disabled = false;
+        }
+    });
+
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+    dropzone.addEventListener('dragleave', () => { dropzone.classList.remove('drag-over'); });
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('drag-over');
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            fileInput.dispatchEvent(new Event('change'));
+        }
+    });
+
+    // Step navigation
+    nextBtn.addEventListener('click', () => forgeShowStep(2));
+    document.getElementById('forge-back-2').addEventListener('click', () => forgeShowStep(1));
+    document.getElementById('forge-next-2').addEventListener('click', () => startForge());
+
+    // Personality sliders
+    initTraitSliders();
+}
+
+// ========== PERSONALITY TRAIT SLIDERS ==========
+const TRAIT_DEFS = [
+    { key: 'rigor',              label: 'Rigor',              tip: 'How precise and detail-oriented. High = meticulous, low = big-picture.' },
+    { key: 'directness',         label: 'Directness',         tip: 'How straightforward in communication. High = blunt and clear, low = diplomatic.' },
+    { key: 'warmth',             label: 'Warmth',             tip: 'How friendly and approachable the tone. High = warm, low = professional/detached.' },
+    { key: 'creativity',         label: 'Creativity',         tip: 'How inventive in problem-solving. High = novel approaches, low = proven methods.' },
+    { key: 'verbosity',          label: 'Verbosity',          tip: 'How detailed responses are. High = thorough explanations, low = concise.' },
+    { key: 'patience',           label: 'Patience',           tip: 'How much step-by-step explanation. High = patient teaching, low = expects expertise.' },
+    { key: 'empathy',            label: 'Empathy',            tip: 'How much emotional context is considered. High = emotionally aware, low = purely logical.' },
+    { key: 'epistemic_humility', label: 'Epistemic Humility', tip: 'How readily the agent acknowledges uncertainty. High = cautious, low = confident.' },
+];
+
+const TRAIT_DEFAULT = 0.5;
+let _traitModified = {};  // track which traits user has touched
+
+function initTraitSliders() {
+    const container = document.getElementById('trait-sliders');
+    container.innerHTML = TRAIT_DEFS.map(t => `
+        <div class="trait-slider-row">
+            <label class="trait-slider-label" title="${t.tip}">
+                ${t.label} <span class="info-icon">&#9432;</span>
+            </label>
+            <input type="range" class="trait-slider-input" id="trait-${t.key}"
+                   data-trait="${t.key}" min="0" max="100" value="50" step="1">
+            <span class="trait-slider-value" id="trait-val-${t.key}">auto</span>
+        </div>
+    `).join('');
+
+    // Slider event listeners
+    container.querySelectorAll('.trait-slider-input').forEach(slider => {
+        slider.addEventListener('input', () => {
+            const trait = slider.dataset.trait;
+            const pct = parseInt(slider.value);
+            document.getElementById('trait-val-' + trait).textContent = pct + '%';
+            slider.classList.add('modified');
+            _traitModified[trait] = pct / 100;
+            updateTraitOverridesInput();
+        });
+    });
+
+    // Reset button
+    document.getElementById('trait-reset-btn').addEventListener('click', resetTraitSliders);
+}
+
+function resetTraitSliders() {
+    _traitModified = {};
+    document.querySelectorAll('.trait-slider-input').forEach(slider => {
+        slider.value = 50;
+        slider.classList.remove('modified');
+    });
+    document.querySelectorAll('.trait-slider-value').forEach(el => {
+        el.textContent = 'auto';
+    });
+    document.getElementById('trait-overrides-input').value = '';
+}
+
+function updateTraitOverridesInput() {
+    const input = document.getElementById('trait-overrides-input');
+    if (Object.keys(_traitModified).length > 0) {
+        input.value = JSON.stringify(_traitModified);
+    } else {
+        input.value = '';
+    }
+}
 
 function initForgeStages(mode) {
     const container = document.getElementById('forge-stages');
-    let stages = ['ingest', 'extract'];
+    let stages = ['ingest', 'extract', 'methodology'];
     if (mode === 'default') stages.push('map', 'culture', 'generate', 'analyze', 'team_compose');
     else if (mode === 'deep') stages.push('map', 'culture', 'generate', 'deep_analyze', 'team_compose');
     else stages.push('generate', 'team_compose');
 
     container.innerHTML = stages.map(s =>
-        `<div class="stage-item stage-pending" id="stage-${s}">
-            <span class="stage-icon">&#9675;</span>
-            <span>${FORGE_STAGE_LABELS[s] || s}</span>
+        `<div class="forge-stage-row stage-pending" id="stage-${s}">
+            <span class="forge-stage-icon">&#9675;</span>
+            <span class="forge-stage-name">${FORGE_STAGE_LABELS[s] || s}</span>
         </div>`
     ).join('');
 }
 
 function updateForgeStage(stage) {
-    // Mark previous active as done
-    document.querySelectorAll('.stage-item.stage-active').forEach(el => {
+    document.querySelectorAll('.forge-stage-row.stage-active').forEach(el => {
         el.classList.remove('stage-active');
         el.classList.add('stage-done');
-        el.querySelector('.stage-icon').innerHTML = '&#10003;';
+        el.querySelector('.forge-stage-icon').innerHTML = '&#10003;';
     });
-    // Mark current as active
     const el = document.getElementById('stage-' + stage);
     if (el) {
         el.classList.remove('stage-pending');
         el.classList.add('stage-active');
-        el.querySelector('.stage-icon').innerHTML = '&#8635;';
+        el.querySelector('.forge-stage-icon').innerHTML = '&#8635;';
     }
 }
 
 function completeAllStages() {
-    document.querySelectorAll('.stage-item.stage-active').forEach(el => {
+    document.querySelectorAll('.forge-stage-row.stage-active').forEach(el => {
         el.classList.remove('stage-active');
         el.classList.add('stage-done');
-        el.querySelector('.stage-icon').innerHTML = '&#10003;';
+        el.querySelector('.forge-stage-icon').innerHTML = '&#10003;';
     });
 }
 
-document.getElementById('forge-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('forge-btn');
-    const progress = document.getElementById('forge-progress');
-    const results = document.getElementById('forge-results');
-    btn.setAttribute('aria-busy', 'true');
-    btn.disabled = true;
-    results.hidden = true;
-    hideEmptyState('forge');
+async function startForge() {
+    forgeShowStep(3);
 
-    const formData = new FormData(e.target);
+    const form = document.getElementById('forge-form');
+    const formData = new FormData(form);
     const forgeSalaryMin = parseFloat(formData.get('salary_min')) || null;
     const forgeSalaryMax = parseFloat(formData.get('salary_max')) || null;
     formData.delete('salary_min');
     formData.delete('salary_max');
     const mode = formData.get('mode');
     initForgeStages(mode);
-    progress.hidden = false;
 
     try {
         const resp = await fetch('/api/forge', { method: 'POST', body: formData });
         const { job_id } = await resp.json();
         if (!resp.ok) throw new Error('Failed to start forge job');
 
-        // Connect SSE
         const es = new EventSource(`/api/forge/${job_id}/stream`);
         es.onmessage = (evt) => {
             const data = JSON.parse(evt.data);
@@ -858,74 +970,121 @@ document.getElementById('forge-form').addEventListener('submit', async (e) => {
                 completeAllStages();
                 es.close();
                 _lastForgeResult = data;
-                const bp = data.blueprint;
-                let html = renderDownloadBar('Forge');
-                // Use server-provided agent team if available, otherwise client-side
-                const forgeTeam = data.agent_team || composeAgentTeam(bp.extraction);
-                html += renderRolePanel(bp.extraction.role);
-                html += renderAgentTeam(forgeTeam);
-                html += renderSkillsTable(bp.extraction.skills);
-                html += renderHumanElements(bp.extraction.skills, bp.extraction.responsibilities);
-                html += renderSuggestedTraits(bp.extraction.suggested_traits);
-                html += renderAutomation(bp.extraction.automation_potential, bp.extraction.automation_rationale);
-                const forgeValue = computeAgentValue(bp.extraction, forgeSalaryMin, forgeSalaryMax);
-                html += renderAgentValue(forgeValue);
-                if (data.traits) html += renderTraitBars(data.traits);
-                html += renderGapAnalysis(data.coverage_score, data.coverage_gaps);
-                if (data.skill_scores) html += renderSkillScores(data.skill_scores);
-
-                // Output file downloads with guidance
-                html += `<div class="download-section" style="margin-top:1.5rem;">
-                    <h4 style="margin-bottom:0.5rem;">Downloads</h4>
-                    <div class="download-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:start;">
-                        <div class="download-item">
-                            <a href="/api/forge/${job_id}/download/yaml" role="button" class="outline">Identity YAML</a>
-                            <small class="download-hint">PersonaNexus agent config</small>
-                        </div>
-                        ${data.skill_folder ? `<div class="download-item">
-                            <a href="/api/forge/${job_id}/download/skill-folder" role="button" class="outline contrast">Claude Code Skill (ZIP)</a>
-                            <small class="download-hint">Drop into .claude/skills/ &mdash; ready to use</small>
-                        </div>` : ''}
-                        ${data.skill_file ? `<div class="download-item">
-                            <a href="/api/forge/${job_id}/download/skill" role="button" class="outline secondary">Full Agent Profile</a>
-                            <small class="download-hint">Detailed SKILL.md with analysis &amp; embedded data</small>
-                        </div>` : ''}
-                    </div>
-                </div>`;
-
-                // Blueprint summary
-                html += `<div class="panel panel-green">
-                    <div class="panel-title">Agent Forged Successfully</div>
-                    <strong>${esc(bp.extraction.role.title)}</strong> &mdash;
-                    Skills: ${bp.extraction.skills.length} |
-                    Coverage: ${Math.round(bp.coverage_score * 100)}% |
-                    Automation: ${Math.round(bp.automation_estimate * 100)}%
-                </div>`;
-
-                results.innerHTML = html;
-                results.hidden = false;
-                btn.removeAttribute('aria-busy');
-                btn.disabled = false;
+                renderForgeResults(data, job_id, forgeSalaryMin, forgeSalaryMax);
+                forgeShowStep(4);
             } else if (data.event === 'error') {
                 es.close();
-                results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Pipeline Error</div>${esc(data.message)}</div>`;
-                results.hidden = false;
-                btn.removeAttribute('aria-busy');
-                btn.disabled = false;
+                const results = document.getElementById('forge-results');
+                results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Pipeline Error</div>${esc(data.message)}</div>
+                    <button class="forge-restart-btn secondary outline" onclick="forgeReset()">Try Again</button>`;
+                forgeShowStep(4);
             }
         };
-        es.onerror = () => {
-            es.close();
-            btn.removeAttribute('aria-busy');
-            btn.disabled = false;
-        };
+        es.onerror = () => { es.close(); };
     } catch (err) {
-        results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(err.message)}</div>`;
-        results.hidden = false;
-        btn.removeAttribute('aria-busy');
-        btn.disabled = false;
+        const results = document.getElementById('forge-results');
+        results.innerHTML = `<div class="panel panel-red"><div class="panel-title">Error</div>${esc(err.message)}</div>
+            <button class="forge-restart-btn secondary outline" onclick="forgeReset()">Try Again</button>`;
+        forgeShowStep(4);
     }
-});
+}
+
+function renderForgeResults(data, jobId, salaryMin, salaryMax) {
+    const bp = data.blueprint;
+    const results = document.getElementById('forge-results');
+    const skillName = data.skill_folder ? data.skill_folder.skill_name : 'skill';
+    const skillMd = data.skill_folder ? data.skill_folder.skill_md : '';
+
+    let html = '';
+
+    // Success hero
+    html += `<div class="forge-success-hero">
+        <div class="forge-success-icon">&#10003;</div>
+        <div class="forge-success-title">${esc(bp.extraction.role.title)}</div>
+        <div class="forge-success-subtitle">${data.clawhub_skill && data.skill_folder ? 'Your Claude Code &amp; ClawHub skills are' : data.clawhub_skill ? 'Your ClawHub skill is' : 'Your Claude Code skill <code>' + esc(skillName) + '</code> is'} ready</div>
+    </div>`;
+
+    // Stats bar
+    html += `<div class="forge-stats">
+        <div class="forge-stat">
+            <span class="forge-stat-value">${bp.extraction.skills.length}</span>
+            <span class="forge-stat-label">Skills</span>
+        </div>
+        <div class="forge-stat">
+            <span class="forge-stat-value">${data.coverage_score != null ? Math.round(data.coverage_score * 100) + '%' : '-'}</span>
+            <span class="forge-stat-label">Coverage</span>
+        </div>
+        <div class="forge-stat">
+            <span class="forge-stat-value">${Math.round(bp.automation_estimate * 100)}%</span>
+            <span class="forge-stat-label">Automation</span>
+        </div>
+    </div>`;
+
+    // Primary download(s)
+    if (data.skill_folder) {
+        html += `<div class="forge-download-hero">
+            <a href="/api/forge/${jobId}/download/skill" role="button">Download SKILL.md</a>
+            <div class="forge-download-hint">Save to <code>.claude/skills/${esc(skillName)}/SKILL.md</code></div>
+        </div>`;
+    }
+
+    if (data.clawhub_skill) {
+        const chName = data.clawhub_skill.skill_name;
+        html += `<div class="forge-download-hero" style="margin-top:0.5rem;">
+            <a href="/api/forge/${jobId}/download/clawhub" role="button" class="secondary">Download ClawHub SKILL.md</a>
+            <div class="forge-download-hint">ClawHub/OpenClaw format &mdash; <code>${esc(chName)}</code></div>
+        </div>`;
+    }
+
+    // Skill preview(s)
+    if (skillMd) {
+        html += `<details class="forge-skill-preview">
+            <summary>Preview SKILL.md</summary>
+            <pre>${esc(skillMd)}</pre>
+        </details>`;
+    }
+    if (data.clawhub_skill) {
+        html += `<details class="forge-skill-preview">
+            <summary>Preview ClawHub SKILL.md</summary>
+            <pre>${esc(data.clawhub_skill.skill_md)}</pre>
+        </details>`;
+    }
+
+    // Detailed analysis (collapsible)
+    html += `<details style="margin-top:1rem;"><summary style="font-weight:600;">Detailed Analysis</summary>`;
+    html += renderRolePanel(bp.extraction.role);
+    const forgeTeam = data.agent_team || composeAgentTeam(bp.extraction);
+    html += renderAgentTeam(forgeTeam);
+    html += renderSkillsTable(bp.extraction.skills);
+    html += renderHumanElements(bp.extraction.skills, bp.extraction.responsibilities);
+    html += renderSuggestedTraits(bp.extraction.suggested_traits);
+    html += renderAutomation(bp.extraction.automation_potential, bp.extraction.automation_rationale);
+    const forgeValue = computeAgentValue(bp.extraction, salaryMin, salaryMax);
+    html += renderAgentValue(forgeValue);
+    if (data.traits) html += renderTraitBars(data.traits);
+    html += renderGapAnalysis(data.coverage_score, data.coverage_gaps);
+    if (data.skill_scores) html += renderSkillScores(data.skill_scores);
+    html += `</details>`;
+
+    // Restart
+    html += `<div style="text-align:center;margin-top:1.5rem;">
+        <button class="forge-restart-btn secondary outline" onclick="forgeReset()">Forge Another</button>
+    </div>`;
+
+    results.innerHTML = html;
+}
+
+window.forgeReset = function() {
+    _lastForgeResult = null;
+    document.getElementById('forge-form').reset();
+    document.getElementById('forge-filename').hidden = true;
+    document.getElementById('forge-dropzone').classList.remove('has-file');
+    document.getElementById('forge-next-1').disabled = true;
+    document.getElementById('forge-results').innerHTML = '';
+    document.getElementById('forge-stages').innerHTML = '';
+    resetTraitSliders();
+    forgeShowStep(1);
+};
 
 // ========== BATCH ==========
 document.getElementById('batch-form').addEventListener('submit', async (e) => {
@@ -1127,4 +1286,5 @@ document.addEventListener('DOMContentLoaded', () => {
     showTab(hash);
     loadCultureTemplates();
     loadSettings();
+    initForgeWizard();
 });
