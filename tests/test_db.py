@@ -469,6 +469,18 @@ class TestHistoryRoutes:
         assert resp.status_code == 200
         assert resp.json()["profiles"] == []
 
+    def test_invalid_status_filter_rejected(self, client):
+        resp = client.get("/api/jobs?status=hacked")
+        assert resp.status_code == 422
+
+    def test_invalid_job_type_filter_rejected(self, client):
+        resp = client.get("/api/jobs?job_type=DROP_TABLE")
+        assert resp.status_code == 422
+
+    def test_valid_status_filter_accepted(self, client):
+        resp = client.get("/api/jobs?status=done")
+        assert resp.status_code == 200
+
     def test_get_job_404(self, client):
         resp = client.get("/api/jobs/aabbccddee11")
         assert resp.status_code == 404

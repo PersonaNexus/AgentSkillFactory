@@ -12,6 +12,8 @@ router = APIRouter(tags=["history"])
 
 # Validation patterns for path parameters
 _HEX_ID_RE = re.compile(r"^[a-f0-9]{8,32}$")
+_VALID_STATUSES = {"pending", "running", "done", "error"}
+_VALID_JOB_TYPES = {"forge", "import", "batch", "extract"}
 
 
 def _validate_id(value: str, label: str = "ID") -> str:
@@ -42,6 +44,11 @@ async def list_jobs(
     job_type: str | None = Query(None),
 ) -> dict[str, Any]:
     """List all jobs with pagination and optional filtering."""
+    if status and status not in _VALID_STATUSES:
+        raise HTTPException(status_code=422, detail=f"Invalid status: {status}")
+    if job_type and job_type not in _VALID_JOB_TYPES:
+        raise HTTPException(status_code=422, detail=f"Invalid job_type: {job_type}")
+
     from agentforge.web.db.repository import JobRepository
 
     sf = _get_session_factory(request)

@@ -283,7 +283,7 @@ async def import_identity(
     store = _get_store(request)
     job = store.create(
         job_type="import",
-        source_filename=Path(filename).stem,
+        source_filename=safe_filename(Path(filename).stem)[:100] or "identity",
         output_format=output_format,
     )
     job.status = "done"
@@ -402,7 +402,7 @@ async def start_forge(
     store = _get_store(request)
     job = store.create(
         job_type="forge",
-        source_filename=filename,
+        source_filename=safe_filename(filename)[:100] or "upload",
         mode=mode,
         model=model,
         output_format=output_format,
