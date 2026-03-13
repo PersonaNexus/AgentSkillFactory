@@ -3,11 +3,22 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 
 router = APIRouter(tags=["history"])
+
+# Validation patterns for path parameters
+_HEX_ID_RE = re.compile(r"^[a-f0-9]{8,32}$")
+
+
+def _validate_id(value: str, label: str = "ID") -> str:
+    """Validate that a path parameter looks like a hex ID."""
+    if not _HEX_ID_RE.match(value):
+        raise HTTPException(status_code=422, detail=f"Invalid {label} format")
+    return value
 
 
 def _get_session_factory(request: Request):
@@ -57,6 +68,7 @@ async def list_jobs(
 @router.get("/jobs/{job_id}")
 async def get_job(job_id: str, request: Request) -> dict[str, Any]:
     """Get full job detail including result."""
+    _validate_id(job_id, "job_id")
     from agentforge.web.db.repository import JobRepository
 
     sf = _get_session_factory(request)
@@ -90,6 +102,7 @@ async def get_job(job_id: str, request: Request) -> dict[str, Any]:
 @router.get("/jobs/{job_id}/reload")
 async def reload_job(job_id: str, request: Request) -> dict[str, Any]:
     """Reload a past job into memory for downloading or continued refinement."""
+    _validate_id(job_id, "job_id")
     store = request.app.state.jobs
     job = store.get(job_id)
     if not job or not job.result:
@@ -112,7 +125,7 @@ async def list_identities(
     request: Request,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
-    search: str | None = Query(None),
+    search: str | None = Query(None, max_length=200),
 ) -> dict[str, Any]:
     """List all saved identities with optional search."""
     from agentforge.web.db.repository import IdentityRepository
@@ -134,6 +147,7 @@ async def list_identities(
 @router.get("/identities/{identity_id}")
 async def get_identity(identity_id: str, request: Request) -> dict[str, Any]:
     """Get full identity detail."""
+    _validate_id(identity_id, "identity_id")
     from agentforge.web.db.repository import IdentityRepository
 
     sf = _get_session_factory(request)
@@ -148,6 +162,7 @@ async def get_identity(identity_id: str, request: Request) -> dict[str, Any]:
 @router.delete("/identities/{identity_id}")
 async def delete_identity(identity_id: str, request: Request) -> dict[str, str]:
     """Delete a saved identity."""
+    _validate_id(identity_id, "identity_id")
     from agentforge.web.db.repository import IdentityRepository
 
     sf = _get_session_factory(request)
@@ -189,6 +204,7 @@ async def list_extractions(
 @router.get("/extractions/{extraction_id}")
 async def get_extraction(extraction_id: str, request: Request) -> dict[str, Any]:
     """Get full extraction detail."""
+    _validate_id(extraction_id, "extraction_id")
     from agentforge.web.db.repository import ExtractionRepository
 
     sf = _get_session_factory(request)
@@ -223,6 +239,7 @@ async def delete_culture_profile(
     profile_id: str, request: Request
 ) -> dict[str, str]:
     """Delete a saved culture profile."""
+    _validate_id(profile_id, "profile_id")
     from agentforge.web.db.repository import CultureRepository
 
     sf = _get_session_factory(request)

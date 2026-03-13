@@ -223,6 +223,31 @@ class TestIdentityRepository:
         repo = IdentityRepository(db_session)
         assert not repo.delete("nonexistent")
 
+    def test_search_escapes_like_wildcards(self, db_session):
+        """Ensure % and _ in search terms are treated literally, not as wildcards."""
+        repo = IdentityRepository(db_session)
+        repo.save(name="100% Effective Agent", identity_yaml="a", source="forge")
+        repo.save(name="Normal Agent", identity_yaml="b", source="forge")
+
+        # Searching for "%" should only match the name containing a literal %
+        results = repo.list_all(search="100%")
+        assert len(results) == 1
+        assert "100%" in results[0]["name"]
+
+        # "_" should not act as a single-char wildcard
+        repo.save(name="A_B Agent", identity_yaml="c", source="forge")
+        results = repo.list_all(search="A_B")
+        assert len(results) == 1
+        assert "A_B" in results[0]["name"]
+
+    def test_search_length_capped(self, db_session):
+        """Search strings longer than 200 chars are truncated."""
+        repo = IdentityRepository(db_session)
+        repo.save(name="Agent", identity_yaml="a", source="forge")
+        # Should not raise even with a very long search string
+        results = repo.list_all(search="x" * 500)
+        assert isinstance(results, list)
+
 
 # ------------------------------------------------------------------
 # Extraction Repository
@@ -445,16 +470,30 @@ class TestHistoryRoutes:
         assert resp.json()["profiles"] == []
 
     def test_get_job_404(self, client):
-        resp = client.get("/api/jobs/nonexistent")
+        resp = client.get("/api/jobs/aabbccddee11")
         assert resp.status_code == 404
 
     def test_get_identity_404(self, client):
-        resp = client.get("/api/identities/nonexistent")
+        resp = client.get("/api/identities/aabbccddee1122334455667788")
         assert resp.status_code == 404
 
     def test_delete_identity_404(self, client):
-        resp = client.delete("/api/identities/nonexistent")
+        resp = client.delete("/api/identities/aabbccddee1122334455667788")
         assert resp.status_code == 404
+
+    def test_invalid_id_format_rejected(self, client):
+        """Non-hex IDs should be rejected with 422."""
+        resp = client.get("/api/jobs/not-valid!")
+        assert resp.status_code == 422
+
+        resp = client.get("/api/identities/ZZZZZZZZZZZZZZZZ")
+        assert resp.status_code == 422
+
+        resp = client.delete("/api/identities/xss-attempt-here")
+        assert resp.status_code == 422
+
+        resp = client.get("/api/extractions/sql-injection-test")
+        assert resp.status_code == 422
 
     def test_forge_creates_job_in_db(self, client):
         """Import identity should create a DB job and identity."""

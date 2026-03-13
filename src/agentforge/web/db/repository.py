@@ -169,6 +169,11 @@ class IdentityRepository:
     def get(self, identity_id: str) -> IdentityRow | None:
         return self.session.get(IdentityRow, identity_id)
 
+    @staticmethod
+    def _escape_like(value: str) -> str:
+        """Escape LIKE wildcards (%, _) in user-supplied search strings."""
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
     def list_all(
         self,
         offset: int = 0,
@@ -177,7 +182,8 @@ class IdentityRepository:
     ) -> list[dict[str, Any]]:
         stmt = select(IdentityRow).order_by(IdentityRow.created_at.desc())
         if search:
-            stmt = stmt.where(IdentityRow.name.ilike(f"%{search}%"))
+            escaped = self._escape_like(search[:200])  # cap search length
+            stmt = stmt.where(IdentityRow.name.ilike(f"%{escaped}%", escape="\\"))
         stmt = stmt.offset(offset).limit(limit)
         rows = self.session.execute(stmt).scalars().all()
         return [
