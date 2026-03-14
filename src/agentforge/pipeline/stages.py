@@ -250,6 +250,19 @@ class DeepAnalyzeStage(PipelineStage):
         return context
 
 
+class ToolMapStage(PipelineStage):
+    """Map extracted skills to concrete tool recommendations."""
+
+    name = "tool_map"
+
+    def run(self, context: dict[str, Any]) -> dict[str, Any]:
+        from agentforge.mapping.tool_mapper import ToolMapper
+
+        mapper = context.get("tool_mapper") or ToolMapper(client=context.get("llm_client"))
+        context["tool_profile"] = mapper.map_tools(context["extraction"])
+        return context
+
+
 class TeamComposeStage(PipelineStage):
     """Compose an AI agent team from extraction results."""
 

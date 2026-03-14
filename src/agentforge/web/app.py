@@ -91,6 +91,11 @@ def create_app() -> FastAPI:
     app.include_router(culture.router, prefix="/api")
     app.include_router(settings.router, prefix="/api")
 
+    # Tools API
+    from agentforge.web.routes import tools
+
+    app.include_router(tools.router, prefix="/api")
+
     # History API
     from agentforge.web.routes import history
 
