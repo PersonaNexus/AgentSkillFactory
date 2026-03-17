@@ -17,6 +17,7 @@ from agentforge.pipeline.stages import (
     MethodologyStage,
     PipelineStage,
     TeamComposeStage,
+    ToolMapStage,
 )
 
 
@@ -66,7 +67,7 @@ class ForgePipeline:
 
     @classmethod
     def default(cls) -> "ForgePipeline":
-        """Standard pipeline: ingest -> [anonymize] -> extract -> methodology -> map -> culture -> generate -> analyze -> team."""
+        """Standard pipeline: ingest -> [anonymize] -> extract -> methodology -> map -> culture -> generate -> tool_map -> analyze -> team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
         pipeline.add_stage(AnonymizeStage())
@@ -75,6 +76,7 @@ class ForgePipeline:
         pipeline.add_stage(MapStage())
         pipeline.add_stage(CultureStage())
         pipeline.add_stage(GenerateStage())
+        pipeline.add_stage(ToolMapStage())
         pipeline.add_stage(AnalyzeStage())
         pipeline.add_stage(TeamComposeStage())
         return pipeline
@@ -102,6 +104,7 @@ class ForgePipeline:
         pipeline.add_stage(MapStage())
         pipeline.add_stage(CultureStage())
         pipeline.add_stage(GenerateStage())
+        pipeline.add_stage(ToolMapStage())
         pipeline.add_stage(DeepAnalyzeStage())
         pipeline.add_stage(TeamComposeStage())
         return pipeline

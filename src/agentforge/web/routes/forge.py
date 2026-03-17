@@ -32,6 +32,7 @@ _STAGE_MESSAGES = {
     "generate": "Generating agent identity...",
     "analyze": "Running gap analysis...",
     "deep_analyze": "Running deep gap analysis...",
+    "tool_map": "Mapping tools & workflows...",
     "team_compose": "Composing agent team...",
 }
 
@@ -170,6 +171,11 @@ def _run_forge(
             } if ch else None,
             "skill_gaps": skill_gaps,
         }
+
+        # Tool profile
+        tool_profile = context.get("tool_profile")
+        if tool_profile:
+            result["tool_profile"] = tool_profile.model_dump(mode="json")
 
         # Store pipeline context for refinement (serializable copies)
         result["_refine_context"] = {
