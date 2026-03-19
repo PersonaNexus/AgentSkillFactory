@@ -19,10 +19,6 @@ def _to_python_id(name: str) -> str:
     return slug or "agent"
 
 
-def _indent(text: str, prefix: str = "    ") -> str:
-    return textwrap.indent(text, prefix)
-
-
 class LangGraphExporter:
     """Generate a runnable LangGraph Python module from a ForgedTeam."""
 
@@ -100,8 +96,7 @@ class LangGraphExporter:
             "AGENT_SKILLS: dict[str, str] = {",
         ]
         for a in agents:
-            escaped = a["skill_md"].replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
-            lines.append(f'    "{a["py_id"]}": """{escaped}""",')
+            lines.append(f'    "{a["py_id"]}": {repr(a["skill_md"])},')
         lines.append("}")
         lines.append("")
         lines.append("")

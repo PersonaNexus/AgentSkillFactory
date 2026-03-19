@@ -722,6 +722,10 @@ def team(
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
 
+    if fmt not in ("claude", "langgraph", "both"):
+        console.print(f"[red]Error:[/red] Invalid format: {fmt}. Choose: claude, langgraph, both")
+        raise typer.Exit(code=1)
+
     if not jd_file.exists():
         console.print(f"[red]Error:[/red] File not found: {jd_file}")
         raise typer.Exit(code=1)
