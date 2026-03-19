@@ -192,6 +192,14 @@ def forge(
     culture: Path | None = typer.Option(
         None, "--culture", "-c", help="Culture file (YAML or markdown) to infuse"
     ),
+    examples: Path | None = typer.Option(
+        None, "--examples", "-e",
+        help="File containing work samples/examples (txt or md)",
+    ),
+    frameworks: Path | None = typer.Option(
+        None, "--frameworks",
+        help="File containing frameworks/methodologies (txt or md)",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
 ) -> None:
     """Forge a complete AI agent blueprint from a job description.
@@ -209,6 +217,7 @@ def forge(
         agentforge forge posting.md --quick --no-skill-file
         agentforge forge job.txt --skill-folder  # also save skill folder to disk
         agentforge forge job.txt --deep  # enhanced gap analysis
+        agentforge forge job.txt --examples samples.md --frameworks methods.md
     """
     from agentforge.pipeline.forge_pipeline import ForgePipeline
 
@@ -221,6 +230,14 @@ def forge(
 
     if culture and not culture.exists():
         console.print(f"[red]Error:[/red] Culture file not found: {culture}")
+        raise typer.Exit(code=1)
+
+    if examples and not examples.exists():
+        console.print(f"[red]Error:[/red] Examples file not found: {examples}")
+        raise typer.Exit(code=1)
+
+    if frameworks and not frameworks.exists():
+        console.print(f"[red]Error:[/red] Frameworks file not found: {frameworks}")
         raise typer.Exit(code=1)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -242,6 +259,12 @@ def forge(
     if culture:
         context["culture_path"] = str(culture)
         console.print(f"[blue]Culture:[/blue] {culture}")
+    if examples:
+        context["user_examples"] = examples.read_text()
+        console.print(f"[blue]Examples:[/blue] {examples}")
+    if frameworks:
+        context["user_frameworks"] = frameworks.read_text()
+        console.print(f"[blue]Frameworks:[/blue] {frameworks}")
 
     console.print(f"[blue]Forging agent from:[/blue] {jd_file}")
 
@@ -395,6 +418,14 @@ def identity_import(
     model: str = typer.Option(
         "claude-sonnet-4-20250514", "--model", "-m", help="Claude model to use for refinement"
     ),
+    examples: Path | None = typer.Option(
+        None, "--examples", "-e",
+        help="File containing work samples/examples (txt or md)",
+    ),
+    frameworks: Path | None = typer.Option(
+        None, "--frameworks",
+        help="File containing frameworks/methodologies (txt or md)",
+    ),
     refine: bool = typer.Option(
         False, "--refine", help="Run LLM-based refinement after import"
     ),
@@ -409,6 +440,7 @@ def identity_import(
         agentforge identity import agent_identity.yaml
         agentforge identity import my-agent.yaml -d ./output --format both
         agentforge identity import agent.yaml --refine  # LLM-enhanced round-trip
+        agentforge identity import agent.yaml --examples samples.md
     """
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
@@ -450,6 +482,22 @@ def identity_import(
             f"Quality criteria: {len(methodology.quality_criteria)}"
         )
 
+    # Read user-provided examples/frameworks
+    user_examples = ""
+    user_frameworks = ""
+    if examples:
+        if not examples.exists():
+            console.print(f"[red]Error:[/red] Examples file not found: {examples}")
+            raise typer.Exit(code=1)
+        user_examples = examples.read_text()
+        console.print(f"[blue]Examples:[/blue] {examples}")
+    if frameworks:
+        if not frameworks.exists():
+            console.print(f"[red]Error:[/red] Frameworks file not found: {frameworks}")
+            raise typer.Exit(code=1)
+        user_frameworks = frameworks.read_text()
+        console.print(f"[blue]Frameworks:[/blue] {frameworks}")
+
     _display_extraction(extraction)
 
     # Regenerate identity (round-trip)
@@ -466,7 +514,10 @@ def identity_import(
         from agentforge.generation.skill_folder import SkillFolderGenerator
 
         sf_gen = SkillFolderGenerator()
-        sf = sf_gen.generate(extraction, identity, jd=None, methodology=methodology)
+        sf = sf_gen.generate(
+            extraction, identity, jd=None, methodology=methodology,
+            user_examples=user_examples, user_frameworks=user_frameworks,
+        )
 
         folder_path = safe_output_path(output_dir, sf.skill_name)
         folder_path.mkdir(exist_ok=True)
@@ -632,6 +683,14 @@ def batch(
     culture: Path | None = typer.Option(
         None, "--culture", "-c", help="Culture file to apply to all agents"
     ),
+    examples: Path | None = typer.Option(
+        None, "--examples", "-e",
+        help="File containing work samples/examples to apply to all agents",
+    ),
+    frameworks: Path | None = typer.Option(
+        None, "--frameworks",
+        help="File containing frameworks/methodologies to apply to all agents",
+    ),
     parallel: int = typer.Option(1, "--parallel", "-p", help="Number of parallel workers"),
     model: str = typer.Option(
         "claude-sonnet-4-20250514", "--model", "-m", help="Claude model to use"
@@ -643,6 +702,7 @@ def batch(
     Examples:
         agentforge batch ./job_descriptions/ -d ./agents
         agentforge batch ./jds/ --culture startup.yaml --parallel 4
+        agentforge batch ./jds/ --examples samples.md --frameworks methods.md
     """
     from agentforge.pipeline.batch import BatchProcessor
     from agentforge.pipeline.forge_pipeline import ForgePipeline
@@ -676,6 +736,18 @@ def batch(
             raise typer.Exit(code=1)
         shared_context["culture_path"] = str(culture)
         console.print(f"[blue]Culture:[/blue] {culture}")
+    if examples:
+        if not examples.exists():
+            console.print(f"[red]Error:[/red] Examples file not found: {examples}")
+            raise typer.Exit(code=1)
+        shared_context["user_examples"] = examples.read_text()
+        console.print(f"[blue]Examples:[/blue] {examples}")
+    if frameworks:
+        if not frameworks.exists():
+            console.print(f"[red]Error:[/red] Frameworks file not found: {frameworks}")
+            raise typer.Exit(code=1)
+        shared_context["user_frameworks"] = frameworks.read_text()
+        console.print(f"[blue]Frameworks:[/blue] {frameworks}")
 
     pipeline = ForgePipeline.default()
     processor = BatchProcessor(
@@ -702,6 +774,14 @@ def team(
     culture: Path | None = typer.Option(
         None, "--culture", "-c", help="Culture file to apply to all agents"
     ),
+    examples: Path | None = typer.Option(
+        None, "--examples", "-e",
+        help="File containing work samples/examples to apply to all agents",
+    ),
+    frameworks: Path | None = typer.Option(
+        None, "--frameworks",
+        help="File containing frameworks/methodologies to apply to all agents",
+    ),
     fmt: str = typer.Option(
         "claude", "--format", "-f",
         help="Output format: claude (default), langgraph, or both",
@@ -716,6 +796,7 @@ def team(
         agentforge team job.txt -d ./agents
         agentforge team posting.pdf --culture startup.yaml
         agentforge team job.txt --format langgraph
+        agentforge team job.txt --examples samples.md --frameworks methods.md
     """
     from agentforge.pipeline.forge_pipeline import ForgePipeline
 
@@ -740,6 +821,18 @@ def team(
     }
     if culture:
         context["culture_path"] = str(culture)
+    if examples:
+        if not examples.exists():
+            console.print(f"[red]Error:[/red] Examples file not found: {examples}")
+            raise typer.Exit(code=1)
+        context["user_examples"] = examples.read_text()
+        console.print(f"[blue]Examples:[/blue] {examples}")
+    if frameworks:
+        if not frameworks.exists():
+            console.print(f"[red]Error:[/red] Frameworks file not found: {frameworks}")
+            raise typer.Exit(code=1)
+        context["user_frameworks"] = frameworks.read_text()
+        console.print(f"[blue]Frameworks:[/blue] {frameworks}")
 
     console.print(f"[blue]Forging team from:[/blue] {jd_file}")
 
