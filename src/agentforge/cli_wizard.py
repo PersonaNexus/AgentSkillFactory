@@ -20,6 +20,7 @@ console = Console()
 _JD_EXTENSIONS = {".txt", ".md", ".markdown", ".pdf", ".docx"}
 _IDENTITY_EXTENSIONS = {".yaml", ".yml"}
 _CULTURE_EXTENSIONS = {".yaml", ".yml", ".md", ".markdown"}
+_TEXT_EXTENSIONS = {".txt", ".md", ".markdown"}
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +137,35 @@ def _pick_directory(prompt_text: str, required: bool = True) -> Path | None:
 # ---------------------------------------------------------------------------
 
 
+def _pick_optional_context_files(opts: dict, include_culture: bool = True) -> None:
+    """Prompt for optional culture, examples, and frameworks files."""
+    if include_culture and typer.confirm("Apply a culture profile?", default=False):
+        templates_dir = Path(__file__).parent / "templates" / "cultures"
+        builtins = [f.stem for f in sorted(templates_dir.glob("*.yaml"))] if templates_dir.exists() else []
+        if builtins:
+            console.print(f"[dim]Built-in templates: {', '.join(builtins)}[/dim]")
+        opts["culture"] = _pick_file("Culture file", _CULTURE_EXTENSIONS, required=False)
+
+    if typer.confirm("Provide work examples?", default=False):
+        opts["examples"] = _pick_file("Examples file", _TEXT_EXTENSIONS, required=False)
+
+    if typer.confirm("Provide frameworks/methodologies?", default=False):
+        opts["frameworks"] = _pick_file("Frameworks file", _TEXT_EXTENSIONS, required=False)
+
+
+def _load_optional_files_to_context(opts: dict, context: dict) -> None:
+    """Load optional culture, examples, and frameworks files into pipeline context."""
+    if opts.get("culture"):
+        context["culture_path"] = str(opts["culture"])
+        console.print(f"[blue]Culture:[/blue] {opts['culture']}")
+    if opts.get("examples"):
+        context["user_examples"] = opts["examples"].read_text()
+        console.print(f"[blue]Examples:[/blue] {opts['examples']}")
+    if opts.get("frameworks"):
+        context["user_frameworks"] = opts["frameworks"].read_text()
+        console.print(f"[blue]Frameworks:[/blue] {opts['frameworks']}")
+
+
 def _pick_forge_options() -> dict:
     """Gather forge-specific options interactively."""
     opts: dict = {}
@@ -150,22 +180,8 @@ def _pick_forge_options() -> dict:
     # Model
     opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
 
-    # Culture
-    if typer.confirm("Apply a culture profile?", default=False):
-        # Check for built-in templates
-        templates_dir = Path(__file__).parent / "templates" / "cultures"
-        builtins = [f.stem for f in sorted(templates_dir.glob("*.yaml"))] if templates_dir.exists() else []
-        if builtins:
-            console.print(f"[dim]Built-in templates: {', '.join(builtins)}[/dim]")
-        opts["culture"] = _pick_file("Culture file", _CULTURE_EXTENSIONS, required=False)
-
-    # Examples
-    if typer.confirm("Provide work examples?", default=False):
-        opts["examples"] = _pick_file("Examples file", {".txt", ".md", ".markdown"}, required=False)
-
-    # Frameworks
-    if typer.confirm("Provide frameworks/methodologies?", default=False):
-        opts["frameworks"] = _pick_file("Frameworks file", {".txt", ".md", ".markdown"}, required=False)
+    # Culture, examples, frameworks
+    _pick_optional_context_files(opts)
 
     # Output
     opts["output_dir"] = typer.prompt("Output directory", default=".")
@@ -181,16 +197,7 @@ def _pick_batch_options() -> dict:
     """Gather batch-specific options interactively."""
     opts: dict = {}
     opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
-
-    if typer.confirm("Apply a culture profile?", default=False):
-        opts["culture"] = _pick_file("Culture file", _CULTURE_EXTENSIONS, required=False)
-
-    if typer.confirm("Provide work examples?", default=False):
-        opts["examples"] = _pick_file("Examples file", {".txt", ".md", ".markdown"}, required=False)
-
-    if typer.confirm("Provide frameworks/methodologies?", default=False):
-        opts["frameworks"] = _pick_file("Frameworks file", {".txt", ".md", ".markdown"}, required=False)
-
+    _pick_optional_context_files(opts)
     opts["output_dir"] = typer.prompt("Output directory", default="./batch_output")
     opts["parallel"] = int(typer.prompt("Parallel workers", default="1"))
     return opts
@@ -200,15 +207,7 @@ def _pick_team_options() -> dict:
     """Gather team-specific options interactively."""
     opts: dict = {}
     opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
-
-    if typer.confirm("Apply a culture profile?", default=False):
-        opts["culture"] = _pick_file("Culture file", _CULTURE_EXTENSIONS, required=False)
-
-    if typer.confirm("Provide work examples?", default=False):
-        opts["examples"] = _pick_file("Examples file", {".txt", ".md", ".markdown"}, required=False)
-
-    if typer.confirm("Provide frameworks/methodologies?", default=False):
-        opts["frameworks"] = _pick_file("Frameworks file", {".txt", ".md", ".markdown"}, required=False)
+    _pick_optional_context_files(opts)
 
     fmt_idx = _numbered_prompt(
         "Output format:",
@@ -232,13 +231,7 @@ def _pick_identity_import_options() -> dict:
 
     opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
     opts["refine"] = typer.confirm("Run LLM-based refinement after import?", default=False)
-
-    if typer.confirm("Provide work examples?", default=False):
-        opts["examples"] = _pick_file("Examples file", {".txt", ".md", ".markdown"}, required=False)
-
-    if typer.confirm("Provide frameworks/methodologies?", default=False):
-        opts["frameworks"] = _pick_file("Frameworks file", {".txt", ".md", ".markdown"}, required=False)
-
+    _pick_optional_context_files(opts, include_culture=False)
     opts["output_dir"] = typer.prompt("Output directory", default=".")
     return opts
 
@@ -250,7 +243,7 @@ def _pick_identity_import_options() -> dict:
 
 def _run_forge(jd_file: Path, opts: dict) -> dict:
     """Run the forge pipeline and return context."""
-    from agentforge.cli import _display_extraction, _ingest_file, _make_client
+    from agentforge.cli import _display_extraction, _make_client
     from agentforge.pipeline.forge_pipeline import ForgePipeline
     from agentforge.utils import safe_output_path
 
@@ -267,16 +260,7 @@ def _run_forge(jd_file: Path, opts: dict) -> dict:
         "input_path": str(jd_file),
         "llm_client": client,
     }
-
-    if opts.get("culture"):
-        context["culture_path"] = str(opts["culture"])
-        console.print(f"[blue]Culture:[/blue] {opts['culture']}")
-    if opts.get("examples"):
-        context["user_examples"] = opts["examples"].read_text()
-        console.print(f"[blue]Examples:[/blue] {opts['examples']}")
-    if opts.get("frameworks"):
-        context["user_frameworks"] = opts["frameworks"].read_text()
-        console.print(f"[blue]Frameworks:[/blue] {opts['frameworks']}")
+    _load_optional_files_to_context(opts, context)
 
     console.print(f"[blue]Forging agent from:[/blue] {jd_file}")
     context = pipeline.run(context)
@@ -315,16 +299,16 @@ def _run_forge(jd_file: Path, opts: dict) -> dict:
             f"  [dim]SKILL.md{ref_msg}[/dim]"
         )
 
-    blueprint = pipeline.to_blueprint(context)
+    coverage = context.get("coverage_score", 0.0)
+    automation = extraction.automation_potential
     console.print(
         f"\n[bold green]Agent '{extraction.role.title}' forged![/bold green]\n"
         f"  Skills: {len(extraction.skills)} | "
-        f"Coverage: {int(blueprint.coverage_score * 100)}% | "
-        f"Automation: {int(blueprint.automation_estimate * 100)}%"
+        f"Coverage: {int(coverage * 100)}% | "
+        f"Automation: {int(automation * 100)}%"
     )
 
     context["_output_dir"] = str(output_dir)
-    context["_pipeline"] = pipeline
     return context
 
 
@@ -346,13 +330,7 @@ def _run_batch(jd_dir: Path, opts: dict) -> dict:
 
     client = _make_client(opts.get("model", "claude-sonnet-4-20250514"))
     shared_context: dict = {"llm_client": client}
-
-    if opts.get("culture"):
-        shared_context["culture_path"] = str(opts["culture"])
-    if opts.get("examples"):
-        shared_context["user_examples"] = opts["examples"].read_text()
-    if opts.get("frameworks"):
-        shared_context["user_frameworks"] = opts["frameworks"].read_text()
+    _load_optional_files_to_context(opts, shared_context)
 
     output_dir = Path(opts.get("output_dir", "./batch_output"))
     pipeline = ForgePipeline.default()
@@ -379,13 +357,7 @@ def _run_team(jd_file: Path, opts: dict) -> dict:
         "input_path": str(jd_file),
         "llm_client": client,
     }
-
-    if opts.get("culture"):
-        context["culture_path"] = str(opts["culture"])
-    if opts.get("examples"):
-        context["user_examples"] = opts["examples"].read_text()
-    if opts.get("frameworks"):
-        context["user_frameworks"] = opts["frameworks"].read_text()
+    _load_optional_files_to_context(opts, context)
 
     console.print(f"[blue]Forging team from:[/blue] {jd_file}")
     context = pipeline.run(context)
@@ -525,6 +497,7 @@ def _refine_loop(context: dict) -> dict:
     from agentforge.utils import safe_output_path
 
     refiner = SkillRefiner()
+    sf_gen = SkillFolderGenerator()
     extraction = context.get("extraction")
     methodology = context.get("methodology")
     identity = context.get("identity")
@@ -591,7 +564,6 @@ def _refine_loop(context: dict) -> dict:
         )
 
         # Regenerate skill folder with refined data
-        sf_gen = SkillFolderGenerator()
         sf = sf_gen.generate(
             extraction, identity, jd=None, methodology=methodology,
         )
