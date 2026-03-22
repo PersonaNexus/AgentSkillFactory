@@ -115,6 +115,18 @@ def _make_job_result(
 # Fixtures
 # ---------------------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Reset the module-level rate limiter between tests.
+
+    The rate limiter is a module-level singleton shared across all tests.
+    Without resetting, tests that hit /api/forge/* endpoints exhaust the
+    20 req/60s window and subsequent tests get 429 responses.
+    """
+    from agentforge.web import rate_limit
+    rate_limit._limiter._requests.clear()
+
+
 @pytest.fixture
 def app():
     """Create a fresh FastAPI app for testing."""
