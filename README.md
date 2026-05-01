@@ -1,6 +1,6 @@
 # AgentForge
 
-> **Repo/Product map:** AgentForge is the product, Python package, and CLI (`agentforge`). The public GitHub repository is currently named [`PersonaNexus/AgentSkillFactory`](https://github.com/PersonaNexus/AgentSkillFactory) for historical reasons. See [docs/repo-product-map.md](docs/repo-product-map.md) for the ecosystem map and naming policy.
+> **Repo/Product map:** AgentForge is the product, Python package, and CLI (`agentforge`). The public GitHub repository is [`PersonaNexus/agentforge`](https://github.com/PersonaNexus/agentforge). It was formerly named `AgentSkillFactory`; GitHub redirects old links. See [docs/repo-product-map.md](docs/repo-product-map.md) for the ecosystem map and naming policy.
 
 Transform job descriptions, role descriptions, and operating context into deployable AI agent blueprints via [PersonaNexus](https://github.com/PersonaNexus/personanexus).
 
@@ -26,8 +26,8 @@ pip install "agentforge[web]"     # adds REST API + web UI
 Or from source:
 
 ```bash
-git clone https://github.com/PersonaNexus/AgentSkillFactory.git
-cd AgentSkillFactory
+git clone https://github.com/PersonaNexus/agentforge.git
+cd agentforge
 pip install -e ".[web]"
 ```
 

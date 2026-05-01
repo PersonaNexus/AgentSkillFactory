@@ -31,11 +31,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/PersonaNexus/AgentSkillFactory"
-Documentation = "https://github.com/PersonaNexus/AgentSkillFactory#readme"
-Repository = "https://github.com/PersonaNexus/AgentSkillFactory"
+Homepage = "https://github.com/PersonaNexus/agentforge"
+Documentation = "https://github.com/PersonaNexus/agentforge#readme"
+Repository = "https://github.com/PersonaNexus/agentforge"
 "PersonaNexus" = "https://github.com/PersonaNexus/personanexus"
-"Bug Tracker" = "https://github.com/PersonaNexus/AgentSkillFactory/issues"
+"Bug Tracker" = "https://github.com/PersonaNexus/agentforge/issues"
 
 [project.optional-dependencies]
 web = [
