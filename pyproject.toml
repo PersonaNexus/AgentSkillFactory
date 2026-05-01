@@ -30,6 +30,13 @@ dependencies = [
     "personanexus>=1.4,<2.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/PersonaNexus/agentforge"
+Documentation = "https://github.com/PersonaNexus/agentforge#readme"
+Repository = "https://github.com/PersonaNexus/agentforge"
+"PersonaNexus" = "https://github.com/PersonaNexus/personanexus"
+"Bug Tracker" = "https://github.com/PersonaNexus/agentforge/issues"
+
 [project.optional-dependencies]
 web = [
     "fastapi>=0.115,<1.0",
