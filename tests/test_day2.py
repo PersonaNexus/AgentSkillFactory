@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
-from pathlib import Path
 
 import pytest
 import typer
@@ -26,7 +24,6 @@ from agentforge.day2 import (
     validate_dir,
     walk_files_no_symlinks,
 )
-
 
 # ---------- frontmatter ----------
 

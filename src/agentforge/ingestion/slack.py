@@ -1,7 +1,7 @@
 """Parse Slack JSON exports into structured data for methodology enrichment."""
 from __future__ import annotations
+
 import json
-import re
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path

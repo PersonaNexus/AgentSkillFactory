@@ -1,16 +1,16 @@
 """AgentForge data models."""
 
-from agentforge.models.job_description import JobDescription, JDSection
-from agentforge.models.extracted_skills import (
-    ExtractedSkill,
-    ExtractedRole,
-    ExtractionResult,
-    SkillCategory,
-    SkillProficiency,
-    SkillImportance,
-    SeniorityLevel,
-)
 from agentforge.models.blueprint import AgentBlueprint
+from agentforge.models.extracted_skills import (
+    ExtractedRole,
+    ExtractedSkill,
+    ExtractionResult,
+    SeniorityLevel,
+    SkillCategory,
+    SkillImportance,
+    SkillProficiency,
+)
+from agentforge.models.job_description import JDSection, JobDescription
 
 __all__ = [
     "JobDescription",

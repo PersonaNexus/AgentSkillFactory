@@ -5,7 +5,6 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-
 _GIT_TIMEOUT_SEC = 2
 
 

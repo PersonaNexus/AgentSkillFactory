@@ -12,9 +12,10 @@ The recency split is opt-in: it only fires when frontmatter carries a
 from __future__ import annotations
 
 from collections import Counter
-from datetime import date, datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from agentforge.corpus import Corpus, JDEntry, load_corpus
 from agentforge.day2.cli_validators import validate_dir
@@ -66,14 +67,14 @@ def _category_breakdown(landscape: SkillLandscape) -> CategoryBreakdown:
     return CategoryBreakdown(counts=dict(counts))
 
 
-def _domain_breakdown(extractions: dict[str, "ExtractionResult"]) -> DomainBreakdown:
+def _domain_breakdown(extractions: dict[str, ExtractionResult]) -> DomainBreakdown:
     counts: Counter[str] = Counter()
     for ex in extractions.values():
         counts[ex.role.domain or "general"] += 1
     return DomainBreakdown(counts=dict(counts))
 
 
-def _seniority_breakdown(extractions: dict[str, "ExtractionResult"]) -> SeniorityBreakdown:
+def _seniority_breakdown(extractions: dict[str, ExtractionResult]) -> SeniorityBreakdown:
     counts: Counter[str] = Counter()
     for ex in extractions.values():
         sen = getattr(ex.role.seniority, "value", str(ex.role.seniority))
@@ -91,7 +92,7 @@ def _parse_date(s: str | None) -> date | None:
 
 
 def _bucket_skills(
-    role_ids: list[str], extractions: dict[str, "ExtractionResult"]
+    role_ids: list[str], extractions: dict[str, ExtractionResult]
 ) -> dict[str, int]:
     """Count how many of the bucket's roles mention each skill (canonical name)."""
     counts: Counter[str] = Counter()
@@ -111,7 +112,7 @@ def _bucket_skills(
 
 def _compute_recency(
     corpus: Corpus,
-    extractions: dict[str, "ExtractionResult"],
+    extractions: dict[str, ExtractionResult],
     *,
     window_days: int,
     today: date | None = None,
@@ -121,7 +122,7 @@ def _compute_recency(
     Returns None when fewer than ``MIN_RECENCY_BUCKET_SIZE`` JDs land on
     each side — recency analysis below that is just noise.
     """
-    today = today or datetime.now(timezone.utc).date()
+    today = today or datetime.now(UTC).date()
     cutoff = today - timedelta(days=window_days)
 
     recent_ids: list[str] = []
@@ -179,7 +180,7 @@ def _compute_recency(
 
 def compute_trends(
     corpus: Corpus,
-    extractions: dict[str, "ExtractionResult"],
+    extractions: dict[str, ExtractionResult],
     *,
     recency_window_days: int = DEFAULT_RECENCY_WINDOW_DAYS,
     today: date | None = None,
@@ -198,7 +199,7 @@ def compute_trends(
 
     return TrendsReport(
         corpus_root=str(corpus.root),
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
         role_count=len(corpus),
         role_ids=[e.role_id for e in corpus],
         skills=skills,

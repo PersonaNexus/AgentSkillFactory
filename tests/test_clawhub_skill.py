@@ -6,16 +6,14 @@ import pytest
 
 from agentforge.generation.clawhub_skill import ClawHubSkillGenerator, ClawHubSkillResult
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     Heuristic,
     MethodologyExtraction,
     OutputTemplate,
     QualityCriterion,
     SkillCategory,
-    SkillProficiency,
-    SuggestedTraits,
     TriggerTechniqueMapping,
 )
 
@@ -118,7 +116,9 @@ class TestClawHubFrontmatter:
 
         # Frontmatter description should be truncated to 200 chars
         frontmatter = result.skill_md.split("---\n")[1]
-        desc_line = [l for l in frontmatter.split("\n") if l.startswith("description:")][0]
+        desc_line = [
+            line for line in frontmatter.split("\n") if line.startswith("description:")
+        ][0]
         # The quoted description content (minus key and quotes) should be <= 200
         desc_content = desc_line.split('"')[1]
         assert len(desc_content) <= 200

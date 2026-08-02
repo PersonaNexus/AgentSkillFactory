@@ -6,7 +6,6 @@ import io
 import json
 import logging
 import tempfile
-import traceback
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -15,7 +14,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
 from agentforge.config import DEFAULT_MODEL
-from agentforge.utils import safe_filename, safe_rel_path
+from agentforge.utils import safe_filename
 from agentforge.web.jobs import Job, JobStore
 
 router = APIRouter(tags=["forge"])
@@ -204,7 +203,7 @@ def _run_forge(
 
         job.emit_done(result)
 
-    except Exception as exc:
+    except Exception:
         logging.getLogger(__name__).exception("Forge pipeline failed")
         logging.getLogger(__name__).exception("Forge pipeline failed")
         job.emit_error("Pipeline failed: an internal error occurred")
@@ -227,14 +226,10 @@ async def import_identity(
     Reverse-maps the identity to AgentForge models, generates skill files,
     and returns a job pre-populated with the result — ready for the refine loop.
     """
+    from agentforge.analysis.skill_reviewer import SkillReviewer
     from agentforge.generation.identity_generator import IdentityGenerator
     from agentforge.generation.identity_loader import IdentityLoader
     from agentforge.generation.skill_folder import SkillFolderGenerator
-    from agentforge.analysis.skill_reviewer import SkillReviewer
-    from agentforge.models.extracted_skills import (
-        ExtractionResult,
-        MethodologyExtraction,
-    )
 
     filename = file.filename or "identity.yaml"
     suffix = Path(filename).suffix.lower()
@@ -255,7 +250,7 @@ async def import_identity(
         extraction, methodology, original_yaml = loader.load_yaml(yaml_str)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
-    except Exception as exc:
+    except Exception:
         logging.getLogger(__name__).exception("Failed to parse identity")
         raise HTTPException(status_code=422, detail="Failed to parse identity file")
 
@@ -702,9 +697,8 @@ async def refine_skill(job_id: str, request: Request) -> dict:
     # Merge uploaded files into examples/frameworks so SkillFolderGenerator
     # receives them as first-class inputs (not just supplementary files).
     if uploaded_files:
-        examples_cats = {"examples", "work_samples", "work-samples"}
         frameworks_cats = {"frameworks", "methodologies"}
-        for filename, content in uploaded_files.items():
+        for _filename, content in uploaded_files.items():
             cat = next(
                 (c for c in file_categories if c.lower() in frameworks_cats), None
             )

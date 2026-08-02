@@ -19,12 +19,11 @@ experimentation/proposal surfaces.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from agentforge.day2.finding_render import render_findings_markdown
 from agentforge.drill.models import ScanFinding, ScanReport, SkillInventory
-
 
 # Defaults — tuneable via CLI flags later. Conservative for Phase 1.0:
 # triggers should be obvious, not hair-trigger.
@@ -193,7 +192,7 @@ def scan(
     scanned_at: datetime | None = None,
 ) -> ScanReport:
     """Run all Phase 1.0 deterministic checks over an inventory."""
-    scanned_at = scanned_at or datetime.now(timezone.utc)
+    scanned_at = scanned_at or datetime.now(UTC)
     findings: list[ScanFinding] = []
     findings.extend(_check_missing_files(inventory))
     findings.extend(_check_bloat(inventory, bloat_threshold))

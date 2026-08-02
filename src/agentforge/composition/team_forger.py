@@ -1,5 +1,6 @@
 """Forge individual skills for each team member from a single extraction."""
 from __future__ import annotations
+
 from agentforge.analysis.team_composer import AgentTeamComposition, AgentTeammate
 from agentforge.composition.models import ForgedTeammate
 from agentforge.generation.identity_generator import IdentityGenerator
@@ -7,7 +8,6 @@ from agentforge.generation.skill_folder import SkillFolderGenerator
 from agentforge.models.extracted_skills import (
     ExtractionResult,
     MethodologyExtraction,
-    SkillCategory,
 )
 
 

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from agentforge.day2.frontmatter import split_frontmatter as _split_frontmatter
@@ -26,7 +26,6 @@ from agentforge.day2.safe_io import (
     walk_files_no_symlinks,
 )
 from agentforge.drill.models import SkillDigest, SkillInventory
-
 
 _BACKTICK_REF_RE = re.compile(r"`([A-Za-z0-9_./\-]+\.[A-Za-z0-9]+)`")
 _LINK_REF_RE = re.compile(r"\]\(([^)]+)\)")
@@ -206,7 +205,7 @@ def ingest(skill_dir: Path, captured_at: datetime | None = None) -> SkillInvento
     if not skill_dir.is_dir():
         raise FileNotFoundError(f"skill_dir does not exist or is not a directory: {skill_dir}")
 
-    captured_at = captured_at or datetime.now(timezone.utc)
+    captured_at = captured_at or datetime.now(UTC)
     layout = detect_layout(skill_dir)
     folders = discover_skill_folders(skill_dir)
 

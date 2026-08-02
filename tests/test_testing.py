@@ -3,15 +3,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     Heuristic,
     MethodologyExtraction,
-    OutputTemplate,
     QualityCriterion,
     SkillCategory,
     SkillProficiency,
@@ -20,7 +17,6 @@ from agentforge.models.extracted_skills import (
 )
 from agentforge.testing.evaluator import Evaluator
 from agentforge.testing.models import (
-    CriterionScore,
     ScoredExecution,
     TestExecution,
     TestReport,

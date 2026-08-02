@@ -14,8 +14,8 @@ from agentforge.utils import safe_filename, safe_output_path, safe_rel_path
 
 class TestAPIKeyValidation:
     def test_empty_key_raises(self):
-        from agentforge.llm.client import LLMClient
         from agentforge.config import AgentForgeConfig
+        from agentforge.llm.client import LLMClient
 
         old_ant = os.environ.pop("ANTHROPIC_API_KEY", None)
         old_oai = os.environ.pop("OPENAI_API_KEY", None)
@@ -83,6 +83,7 @@ class TestAPIKeyValidation:
 class TestLLMRetry:
     def test_retry_on_rate_limit(self):
         import anthropic
+
         from agentforge.llm.client import LLMClient
 
         client = LLMClient(api_key="sk-ant-test", provider="anthropic")
@@ -108,6 +109,7 @@ class TestLLMRetry:
 
     def test_auth_error_raises_immediately(self):
         import anthropic
+
         from agentforge.llm.client import LLMClient
 
         client = LLMClient(api_key="sk-ant-bad", provider="anthropic")
@@ -126,6 +128,7 @@ class TestLLMRetry:
 
     def test_api_status_error_raises(self):
         import anthropic
+
         from agentforge.llm.client import LLMClient
 
         client = LLMClient(api_key="sk-ant-test", provider="anthropic")
@@ -141,6 +144,7 @@ class TestLLMRetry:
 
     def test_max_retries_exhausted(self):
         import anthropic
+
         from agentforge.llm.client import LLMClient
 
         client = LLMClient(api_key="sk-ant-test", provider="anthropic")
@@ -213,6 +217,7 @@ class TestUploadSizeLimits:
     def test_extract_route_has_size_check(self):
         """Verify the extract route enforces upload size limits."""
         import inspect
+
         from agentforge.web.routes.extract import extract
 
         source = inspect.getsource(extract)
@@ -320,6 +325,7 @@ class TestExtractStructured:
     def test_extract_structured_success(self):
         """Test extract_structured with mocked Anthropic API response."""
         from pydantic import BaseModel
+
         from agentforge.llm.client import LLMClient
 
         class SimpleOutput(BaseModel):
@@ -348,6 +354,7 @@ class TestExtractStructured:
     def test_extract_structured_with_system(self):
         """Test extract_structured passes system prompt."""
         from pydantic import BaseModel
+
         from agentforge.llm.client import LLMClient
 
         class SimpleOutput(BaseModel):
@@ -377,6 +384,7 @@ class TestExtractStructured:
     def test_extract_structured_no_tool_use(self):
         """Should raise if no tool use found in response."""
         from pydantic import BaseModel
+
         from agentforge.llm.client import LLMClient
 
         class Dummy(BaseModel):
@@ -398,6 +406,7 @@ class TestExtractStructured:
     def test_extract_structured_openai_success(self):
         """Test extract_structured with mocked OpenAI API response."""
         from pydantic import BaseModel
+
         from agentforge.llm.client import LLMClient
 
         class SimpleOutput(BaseModel):
@@ -428,6 +437,7 @@ class TestExtractStructured:
     def test_connection_error_retry(self):
         """Connection errors should be retried."""
         import anthropic
+
         from agentforge.llm.client import LLMClient
 
         client = LLMClient(api_key="sk-ant-test", provider="anthropic")
@@ -448,8 +458,8 @@ class TestExtractStructured:
 
     def test_config_fallback_for_api_key(self):
         """LLMClient should fall back to config file for API key."""
-        from agentforge.llm.client import LLMClient
         from agentforge.config import AgentForgeConfig
+        from agentforge.llm.client import LLMClient
 
         old_ant = os.environ.pop("ANTHROPIC_API_KEY", None)
         old_oai = os.environ.pop("OPENAI_API_KEY", None)
@@ -505,6 +515,66 @@ class TestBearerAuthMiddleware:
         try:
             token = _get_api_token()
             assert token == "disabled"
+        finally:
+            if old is not None:
+                os.environ["AGENTFORGE_API_TOKEN"] = old
+            else:
+                os.environ.pop("AGENTFORGE_API_TOKEN", None)
+
+    def test_loopback_hosts(self):
+        from agentforge.web.auth import is_loopback_host
+
+        assert is_loopback_host("127.0.0.1")
+        assert is_loopback_host("localhost")
+        assert is_loopback_host("::1")
+        assert not is_loopback_host("0.0.0.0")
+        assert not is_loopback_host("192.168.1.1")
+
+    def test_ensure_bind_auth_loopback_ok_without_token(self):
+        from agentforge.web.auth import ensure_bind_auth
+
+        old = os.environ.pop("AGENTFORGE_API_TOKEN", None)
+        try:
+            with patch("agentforge.config.load_config") as mock_cfg:
+                mock_cfg.return_value = MagicMock(web_api_token=None)
+                ensure_bind_auth("127.0.0.1")  # must not raise
+        finally:
+            if old is not None:
+                os.environ["AGENTFORGE_API_TOKEN"] = old
+
+    def test_ensure_bind_auth_public_requires_token(self):
+        from agentforge.web.auth import ensure_bind_auth
+
+        old = os.environ.pop("AGENTFORGE_API_TOKEN", None)
+        try:
+            with patch("agentforge.config.load_config") as mock_cfg:
+                mock_cfg.return_value = MagicMock(web_api_token=None)
+                with pytest.raises(ValueError, match="without API authentication"):
+                    ensure_bind_auth("0.0.0.0")
+        finally:
+            if old is not None:
+                os.environ["AGENTFORGE_API_TOKEN"] = old
+
+    def test_ensure_bind_auth_public_ok_with_token(self):
+        from agentforge.web.auth import ensure_bind_auth
+
+        old = os.environ.get("AGENTFORGE_API_TOKEN")
+        os.environ["AGENTFORGE_API_TOKEN"] = "secret-token"
+        try:
+            ensure_bind_auth("0.0.0.0")
+        finally:
+            if old is not None:
+                os.environ["AGENTFORGE_API_TOKEN"] = old
+            else:
+                os.environ.pop("AGENTFORGE_API_TOKEN", None)
+
+    def test_ensure_bind_auth_public_ok_when_disabled(self):
+        from agentforge.web.auth import ensure_bind_auth
+
+        old = os.environ.get("AGENTFORGE_API_TOKEN")
+        os.environ["AGENTFORGE_API_TOKEN"] = "disabled"
+        try:
+            ensure_bind_auth("0.0.0.0")
         finally:
             if old is not None:
                 os.environ["AGENTFORGE_API_TOKEN"] = old

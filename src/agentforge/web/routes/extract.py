@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import tempfile
 from pathlib import Path
-
-import logging
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 
@@ -84,7 +83,7 @@ async def extract(
         return response
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except Exception:
         logging.getLogger(__name__).exception("Extraction failed")
         raise HTTPException(status_code=500, detail="Internal server error")
     finally:

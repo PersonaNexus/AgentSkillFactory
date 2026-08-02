@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date
 from pathlib import Path
 
-import pytest
-
-from agentforge.corpus import Corpus, JDEntry, JDFrontmatter, load_corpus
+from agentforge.corpus import load_corpus
 from agentforge.department.cluster import cluster_skills
 from agentforge.drill import ingest as drill_ingest
 from agentforge.market.gap import compute_gap, render_gap_markdown
@@ -20,7 +18,6 @@ from agentforge.models.extracted_skills import (
     SkillImportance,
     SkillProficiency,
 )
-
 
 JD_FIXTURE = Path(__file__).parent / "fixtures" / "jd-corpus" / "dev-team"
 SKILL_FIXTURE = Path(__file__).parent / "fixtures" / "skill-corpus" / "dev-skills"

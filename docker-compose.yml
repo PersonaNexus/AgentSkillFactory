@@ -6,6 +6,10 @@ services:
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Required for non-loopback bind (container listens on 0.0.0.0).
+      # Generate with: openssl rand -hex 32
+      # Set to "disabled" only for fully trusted private networks.
+      - AGENTFORGE_API_TOKEN=${AGENTFORGE_API_TOKEN:?Set AGENTFORGE_API_TOKEN before docker compose up}
       - AGENTFORGE_DB_URL=sqlite:///data/agentforge.db
     volumes:
       - agentforge-data:/app/data

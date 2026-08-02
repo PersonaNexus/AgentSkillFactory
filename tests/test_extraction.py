@@ -9,14 +9,13 @@ import pytest
 from agentforge.extraction.skill_extractor import SkillExtractor
 from agentforge.llm.client import LLMClient, _inline_refs
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SkillCategory,
     SkillProficiency,
     SuggestedTraits,
 )
-from agentforge.models.job_description import JobDescription, JDSource
 
 
 def _mock_extraction_result() -> ExtractionResult:
@@ -98,7 +97,7 @@ class TestSkillExtractor:
     def test_extract_default_client_requires_api_key(self):
         """Test that SkillExtractor raises if no API key is set."""
         import os
-        from unittest.mock import patch
+
         from agentforge.config import AgentForgeConfig
 
         # Remove API keys from env and mock config to test validation

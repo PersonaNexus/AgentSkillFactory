@@ -11,16 +11,14 @@ from sqlalchemy import create_engine
 pytestmark = pytest.mark.web
 from sqlalchemy.orm import sessionmaker
 
-from agentforge.web.db.engine import init_db
-from agentforge.web.db.models import Base, JobRow, IdentityRow, ExtractionRow, CultureProfileRow
+from agentforge.web.db.models import Base, JobRow
 from agentforge.web.db.repository import (
-    JobRepository,
-    IdentityRepository,
-    ExtractionRepository,
     CultureRepository,
+    ExtractionRepository,
+    IdentityRepository,
+    JobRepository,
 )
-from agentforge.web.jobs import Job, JobStore
-
+from agentforge.web.jobs import JobStore
 
 # ------------------------------------------------------------------
 # Fixtures
@@ -60,10 +58,6 @@ def db_store(session_factory):
 
 class TestEngine:
     def test_init_db_creates_tables(self, db_engine):
-        inspector = db_engine.dialect.get_table_names(
-            db_engine.connect()
-        ) if hasattr(db_engine.dialect, 'get_table_names') else []
-        # Alternative check: try to query
         from sqlalchemy import inspect as sa_inspect
         insp = sa_inspect(db_engine)
         tables = insp.get_table_names()
@@ -442,8 +436,9 @@ class TestHistoryRoutes:
     def client(self):
         import os
         os.environ["AGENTFORGE_DATABASE_URL"] = "sqlite:///:memory:"
-        from agentforge.web.app import create_app
         from starlette.testclient import TestClient
+
+        from agentforge.web.app import create_app
 
         app = create_app()
         yield TestClient(app)

@@ -141,9 +141,9 @@ def cmd_gap(
     skill_dir = validate_dir(skill_dir, entity="skill-dir")
     out_dir = (output_dir or (skill_dir / ".drill" / "market")).expanduser().resolve()
 
+    from agentforge.corpus import load_corpus
     from agentforge.department.cluster import cluster_skills
     from agentforge.department.synthesize import _default_extractor, extract_corpus
-    from agentforge.corpus import load_corpus
     from agentforge.drill.ingest import ingest as drill_ingest
     from agentforge.llm.client import LLMClient
 

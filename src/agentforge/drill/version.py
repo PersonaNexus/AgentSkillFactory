@@ -21,9 +21,13 @@ from pydantic import BaseModel
 from agentforge.day2.vcs import git_state
 from agentforge.day2.version_log import (
     annotate_latest as _annotate_latest,
+)
+from agentforge.day2.version_log import (
     commit_label,
-    load_versions as _load_versions,
     render_version_log,
+)
+from agentforge.day2.version_log import (
+    load_versions as _load_versions,
 )
 from agentforge.drill.models import SkillInventory
 

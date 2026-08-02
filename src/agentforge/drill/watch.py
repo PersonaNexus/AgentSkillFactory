@@ -15,12 +15,11 @@ The diff is deterministic and slug-keyed.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from agentforge.day2.finding_render import render_findings_markdown
 from agentforge.drill.models import SkillInventory, WatchFinding, WatchReport
-
 
 GROW_RATIO = 0.25  # body word count growth that triggers a finding
 DESC_TRIVIAL_LEN = 20  # below this, treat any change as material
@@ -39,7 +38,7 @@ def load_snapshot(path: Path) -> SkillInventory:
     return SkillInventory.model_validate(json.loads(path.read_text(encoding="utf-8")))
 
 
-def _index(inventory: SkillInventory) -> dict[str, "object"]:
+def _index(inventory: SkillInventory) -> dict[str, object]:
     return {d.slug: d for d in inventory.skills}
 
 
@@ -122,7 +121,7 @@ def watch(
 ) -> WatchReport:
     """Compare the two most recent snapshots (or explicit ones) under skill_dir."""
     skill_dir = Path(skill_dir).expanduser().resolve()
-    compared_at = compared_at or datetime.now(timezone.utc)
+    compared_at = compared_at or datetime.now(UTC)
 
     if current_path is None or prior_path is None:
         snaps = list_snapshots(skill_dir)

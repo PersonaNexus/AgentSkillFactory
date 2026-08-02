@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-import pytest
-
-from agentforge.analysis.value_estimator import AgentValueEstimator, ValueEstimate
+from agentforge.analysis.value_estimator import AgentValueEstimator
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SkillCategory,
-    SkillImportance,
     SkillProficiency,
 )
 

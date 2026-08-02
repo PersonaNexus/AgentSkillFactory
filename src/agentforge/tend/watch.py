@@ -7,7 +7,7 @@ Read-only on agent source files. All output is written under
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from agentforge.tend.models import (
@@ -176,7 +176,7 @@ def watch(agent_dir: Path, compared_at: datetime | None = None) -> WatchReport:
     none exist the report is empty with a single 'no_snapshots' finding.
     """
     agent_dir = agent_dir.resolve()
-    compared_at = compared_at or datetime.now(timezone.utc)
+    compared_at = compared_at or datetime.now(UTC)
     snaps = list_snapshots(agent_dir)
     if not snaps:
         return WatchReport(

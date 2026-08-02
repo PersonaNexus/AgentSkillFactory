@@ -14,9 +14,9 @@ if importlib.util.find_spec("fastapi") is None:
     collect_ignore.append("test_forge_routes.py")
 
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SeniorityLevel,
     SkillCategory,
     SkillImportance,
@@ -196,9 +196,10 @@ def sample_methodology() -> MethodologyExtraction:
 # Deployment-artifact fixtures
 # ---------------------------------------------------------------------------
 
+from personanexus.types import AgentIdentity
+
 from agentforge.generation.identity_generator import IdentityGenerator
 from agentforge.generation.openclaw_compiler import OpenClawCompiler, OpenClawOutput
-from personanexus.types import AgentIdentity
 
 
 @pytest.fixture(scope="session")

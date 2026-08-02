@@ -184,7 +184,7 @@ class LangGraphExporter:
             lines.append("    {")
             lines.append(f'        "name": {wf.name!r},')
             lines.append(f'        "trigger": {wf.trigger!r},')
-            lines.append(f'        "steps": [')
+            lines.append('        "steps": [')
             for step in wf.steps:
                 py_id = _to_python_id(step.agent)
                 lines.append(f'            {{"agent": "{py_id}", "task": {step.task!r}}},')

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import select
@@ -16,7 +16,6 @@ from agentforge.web.db.models import (
     IdentityRow,
     JobRow,
 )
-
 
 # ------------------------------------------------------------------
 # Job Repository
@@ -67,7 +66,7 @@ class JobRepository:
         row.result_json = json.dumps(result) if result is not None else None
         row.error = error
         if status in ("done", "error"):
-            row.completed_at = datetime.now(timezone.utc)
+            row.completed_at = datetime.now(UTC)
         self.session.commit()
 
     def list_all(
@@ -126,7 +125,7 @@ class JobRepository:
             .values(
                 status="error",
                 error="Server restarted during execution",
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(UTC),
             )
         )
         result = self.session.execute(stmt)

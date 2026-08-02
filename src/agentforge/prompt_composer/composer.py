@@ -4,7 +4,6 @@ from __future__ import annotations
 from .budget import allocate_budgets, estimate_tokens, truncate_to_budget
 from .types import AssembledPrompt, LayerConfig, LayerType, PromptLayer
 
-
 # Default section markers per layer type.
 _SECTION_MARKERS: dict[LayerType, str] = {
     LayerType.PERSONA: "## Identity & Persona",
@@ -67,7 +66,7 @@ class PromptComposer:
             return AssembledPrompt(text="", total_tokens=0)
 
         # Sort by priority.
-        sorted_layers = sorted(self._layers, key=lambda l: l.priority)
+        sorted_layers = sorted(self._layers, key=lambda layer: layer.priority)
 
         # Allocate budgets.
         budgets = allocate_budgets(sorted_layers, self.total_budget, self.config)

@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from agentforge.models.culture import CultureProfile, CultureValue
+from agentforge.models.culture import CultureProfile
 
 
 class CultureParser:

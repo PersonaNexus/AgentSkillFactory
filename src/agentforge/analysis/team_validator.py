@@ -11,7 +11,6 @@ schema before deployment. Surfaces:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from agentforge.composition.models import ForgedTeam, ForgedTeammate
 
@@ -146,8 +145,6 @@ class TeamValidator:
         self, team: ForgedTeam, report: ValidationReport
     ) -> None:
         """Check that all agents have basic guardrails."""
-        essential_guardrails = ["no_fabrication", "domain_boundary"]
-
         for ft in team.teammates:
             agent_name = ft.teammate.name
             skill_md = ft.skill_folder.skill_md.lower()

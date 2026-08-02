@@ -34,3 +34,4 @@ htmlcov/
 # AgentForge runtime caches and per-target output
 .agentforge/
 .tend/
+.drill/

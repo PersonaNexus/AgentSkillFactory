@@ -11,12 +11,11 @@ This module never edits SOUL.md or any other source file.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
-
 
 SCENARIO_DIR = Path(__file__).parent / "scenarios"
 
@@ -195,7 +194,7 @@ def run_ab(
     """
     judge_client = judge_client or client
     judge_label = judge_label or model_label
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     outcomes: list[ScenarioOutcome] = []
 
     for sc in scenarios.scenarios:
@@ -211,7 +210,7 @@ def run_ab(
             treatment_score=t_score,
         ))
 
-    finished = datetime.now(timezone.utc)
+    finished = datetime.now(UTC)
     return ABReport(
         agent_name=agent_name,
         started_at=started,

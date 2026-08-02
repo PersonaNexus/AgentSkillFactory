@@ -9,10 +9,8 @@ from __future__ import annotations
 import difflib
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 from agentforge.llm.client import LLMClient
-
 
 REFINE_SYSTEM_PROMPT = """\
 You are a skill refinement engine for AI agent skills. You take an existing \

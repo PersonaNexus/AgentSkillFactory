@@ -1,7 +1,8 @@
 """Data models for skill testing and validation."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from pydantic import BaseModel, Field
+
 
 @dataclass
 class TestScenario:

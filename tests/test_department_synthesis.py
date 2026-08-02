@@ -33,7 +33,6 @@ from agentforge.models.extracted_skills import (
     SkillProficiency,
 )
 
-
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "jd-corpus" / "dev-team"
 
 

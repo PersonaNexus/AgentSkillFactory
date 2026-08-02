@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import yaml
@@ -13,7 +12,6 @@ from agentforge.mapping.culture_mapper import CultureMixinConverter, CulturePars
 from agentforge.models.culture import CultureProfile, CultureValue
 from agentforge.models.tool_profile import AgentToolProfile
 from agentforge.pipeline.stages import CultureStage
-
 
 TEMPLATES_DIR = Path(__file__).parent.parent / "src" / "agentforge" / "templates" / "cultures"
 
@@ -390,11 +388,15 @@ class TestCultureStage:
 
     def test_pipeline_with_culture_and_mocked_extraction(self, fixtures_dir):
         """Full pipeline with culture applied via mocked extraction."""
-        from agentforge.pipeline.forge_pipeline import ForgePipeline
         from agentforge.models.extracted_skills import (
-            ExtractionResult, ExtractedRole, ExtractedSkill,
-            SkillCategory, SkillProficiency, SuggestedTraits,
+            ExtractedRole,
+            ExtractedSkill,
+            ExtractionResult,
+            SkillCategory,
+            SkillProficiency,
+            SuggestedTraits,
         )
+        from agentforge.pipeline.forge_pipeline import ForgePipeline
 
         pipeline = ForgePipeline.default()
 

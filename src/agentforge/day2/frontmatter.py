@@ -12,7 +12,6 @@ import re
 
 import yaml
 
-
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?(.*)\Z", re.DOTALL)
 
 

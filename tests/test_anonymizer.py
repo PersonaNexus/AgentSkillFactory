@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from agentforge.ingestion.anonymizer import (
     AnonymizationResult,
     anonymize_text_simple,

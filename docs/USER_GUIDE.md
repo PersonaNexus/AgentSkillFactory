@@ -1,4 +1,4 @@
-# AgentSkillFactory — User Guide
+# AgentForge — User Guide
 
 > Transform job descriptions into production-ready AI agent skills, tool configs, and team blueprints.
 
@@ -32,7 +32,7 @@ agentforge forge job_description.txt --skill-folder
 
 ## Core Concepts
 
-**AgentSkillFactory** takes a job description and produces:
+**AgentForge** takes a job description and produces:
 
 | Output | What it is | Where it goes |
 |--------|-----------|---------------|
@@ -276,7 +276,7 @@ List the specific tools, templates, and processes:
 
 ## MCP Server
 
-AgentSkillFactory itself can run as an MCP server, letting other Claude Code agents forge skills programmatically:
+AgentForge itself can run as an MCP server, letting other Claude Code agents forge skills programmatically:
 
 ```json
 // .mcp.json or ~/.claude/mcp.json

@@ -33,19 +33,19 @@ class InterviewResult:
         """Convert interview answers to a role description text."""
         lines: list[str] = []
 
-        lines.append(f"# Role Description")
+        lines.append("# Role Description")
         lines.append("")
-        lines.append(f"## Purpose")
+        lines.append("## Purpose")
         lines.append(self.purpose)
         lines.append("")
 
         if self.domain:
-            lines.append(f"## Domain")
+            lines.append("## Domain")
             lines.append(self.domain)
             lines.append("")
 
         if self.seniority:
-            lines.append(f"## Seniority Level")
+            lines.append("## Seniority Level")
             lines.append(self.seniority)
             lines.append("")
 

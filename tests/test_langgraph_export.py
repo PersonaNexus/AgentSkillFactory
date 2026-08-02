@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import ast
 
-import pytest
-
 from agentforge.analysis.team_composer import AgentTeamComposition, AgentTeammate
 from agentforge.composition.conductor_generator import ConductorGenerator
 from agentforge.composition.langgraph_export import LangGraphExporter, _to_python_id
@@ -19,7 +17,6 @@ from agentforge.composition.models import (
 from agentforge.composition.orchestration_config import OrchestrationConfigExporter
 from agentforge.generation.skill_folder import SkillFolderResult
 from agentforge.models.extracted_skills import ExtractedSkill, SkillCategory
-
 from tests.conftest import _make_sample_extraction
 
 

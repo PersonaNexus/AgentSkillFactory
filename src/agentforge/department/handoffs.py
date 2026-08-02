@@ -58,7 +58,7 @@ class _HandoffJudgeResult(BaseModel):
 
 def _build_role_summary(
     entry,
-    extraction: "ExtractionResult | None",
+    extraction: ExtractionResult | None,
 ) -> str:
     """Compact role brief used in the LLM prompt."""
     title = entry.frontmatter.title
@@ -91,9 +91,9 @@ _JUDGE_SYSTEM = (
 
 
 def detect_handoffs_llm(
-    corpus: "Corpus",
-    extractions: dict[str, "ExtractionResult"],
-    client: "LLMClient",
+    corpus: Corpus,
+    extractions: dict[str, ExtractionResult],
+    client: LLMClient,
 ) -> HandoffGraph:
     """LLM-judged handoff detection across a small corpus.
 
@@ -143,9 +143,9 @@ def detect_handoffs_llm(
 
 
 def detect_handoffs(
-    corpus: "Corpus",
-    extractions: dict[str, "ExtractionResult"],
-    client: "LLMClient | None" = None,
+    corpus: Corpus,
+    extractions: dict[str, ExtractionResult],
+    client: LLMClient | None = None,
 ) -> HandoffGraph:
     """Public entry point. With ``client=None`` returns an empty graph."""
     if client is None:

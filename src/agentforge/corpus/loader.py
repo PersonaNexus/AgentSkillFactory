@@ -8,6 +8,8 @@ from pathlib import Path
 from agentforge.corpus.models import Corpus, JDEntry, JDFrontmatter
 from agentforge.day2.frontmatter import (
     FRONTMATTER_RE as _FRONTMATTER_RE,
+)
+from agentforge.day2.frontmatter import (
     FrontmatterParseError,
     split_frontmatter,
 )

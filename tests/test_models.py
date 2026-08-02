@@ -8,9 +8,9 @@ from pydantic import ValidationError
 from agentforge.models.blueprint import AgentBlueprint
 from agentforge.models.culture import CultureProfile, CultureValue
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SeniorityLevel,
     SkillCategory,
     SkillImportance,

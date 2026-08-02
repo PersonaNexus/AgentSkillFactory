@@ -97,5 +97,5 @@ async def validate_key(data: ValidateKeyRequest) -> dict:
                 messages=[{"role": "user", "content": "Hi"}],
             )
         return {"valid": True, "provider": provider}
-    except Exception as e:
+    except Exception:
         return {"valid": False, "provider": provider, "error": "Key validation failed"}

@@ -6,7 +6,6 @@ from agentforge.models.extracted_skills import (
     ExtractionResult,
     SeniorityLevel,
     SkillCategory,
-    SuggestedTraits,
 )
 
 # Deterministic base trait profiles by role domain.

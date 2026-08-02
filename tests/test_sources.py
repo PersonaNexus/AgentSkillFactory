@@ -2,10 +2,6 @@
 from __future__ import annotations
 
 import json
-import tempfile
-from pathlib import Path
-
-import pytest
 
 from agentforge.ingestion.git_log import GitCorpus, GitLogParser
 from agentforge.ingestion.meeting_notes import MeetingCorpus, MeetingNotesParser
@@ -169,10 +165,8 @@ Body:
 Files:
 """
         parser = GitLogParser()
-        corpus = parser.parse(log_text=log, author_filter="alice")
-
-        # Author filter applies post-parse
-        # The parser still extracts patterns from all commits in the log text
+        # Author filter applies post-parse; still extracts patterns from all commits
+        assert parser.parse(log_text=log, author_filter="alice") is not None
 
     def test_to_enrichment(self):
         corpus = GitCorpus(

@@ -350,6 +350,7 @@ def _run_team(jd_file: Path, opts: dict) -> dict:
     from agentforge.cli import _make_client
     from agentforge.composition.orchestration_config import OrchestrationConfigExporter
     from agentforge.pipeline.forge_pipeline import ForgePipeline
+    from agentforge.utils import safe_rel_path
 
     pipeline = ForgePipeline.team()
     client = _make_client(opts.get("model", "claude-sonnet-4-20250514"))
@@ -423,7 +424,7 @@ def _run_team(jd_file: Path, opts: dict) -> dict:
 
 def _run_identity_import(identity_file: Path, opts: dict) -> dict:
     """Run identity import."""
-    from agentforge.cli import _display_extraction, _make_client
+    from agentforge.cli import _display_extraction
     from agentforge.generation.identity_generator import IdentityGenerator
     from agentforge.generation.identity_loader import IdentityLoader
     from agentforge.utils import safe_output_path, safe_rel_path

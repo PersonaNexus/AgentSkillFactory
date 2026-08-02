@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from agentforge.analysis.cost_projector import CostProjection, CostProjector
+from agentforge.analysis.cost_projector import CostProjector
 from agentforge.generation.skill_file import SkillFileGenerator
 from tests.conftest import _make_sample_extraction
 
@@ -56,7 +54,7 @@ class TestCostProjection:
     def test_budget_utilization(self):
         projector = CostProjector(monthly_budget=100.0)
         report = projector.project("a" * 4000, daily_calls=50)
-        assert 0 <= report.budget_utilization
+        assert report.budget_utilization >= 0
         expected = report.monthly_cost_usd / 100.0
         assert abs(report.budget_utilization - expected) < 0.01
 
