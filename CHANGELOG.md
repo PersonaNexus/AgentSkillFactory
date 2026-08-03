@@ -7,15 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-08-03
+
 ### Added
 
 - **`forge --check` / `--check-strict` / `--check-domain`** — optional post-forge quality gate (exit 1 on fail).
 - Post-forge **Next steps** panel always printed.
 - **Fixture structural digests** — anti-drift locks under `tests/fixtures/eval/*.digest.json`;
   regen via `scripts/regenerate_eval_digests.py`.
-- `docs/GOAL-0.3.md` — hero-path milestone tracking.
-
-## [0.2.2] — 2026-08-03
+- `docs/GOAL-0.3.md` — hero-path milestone (shipped).
 
 ### Changed
 
@@ -23,11 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   `agentforge` is already used by an unrelated project on PyPI).
 - **CLI and import are unchanged:** `agentforge` / `import agentforge`.
 - Install docs and publish instructions updated for the new name.
+- Publish workflow uses `pypa/gh-action-pypi-publish` (OIDC trusted publishing).
 
 ```bash
 pip install personanexus-agentforge
 pip install "personanexus-agentforge[web]"
 ```
+
+Published: https://pypi.org/project/personanexus-agentforge/
 
 ## [0.2.1] — 2026-08-03
 

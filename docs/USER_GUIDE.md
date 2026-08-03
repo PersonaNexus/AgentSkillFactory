@@ -22,12 +22,15 @@ agentforge serve --open
 ### Fastest Path to a Skill
 
 ```bash
-# CLI: one command, one file
-agentforge forge job_description.txt --skill-folder
+# Hero path: forge + skill folder + quality gate
+agentforge forge job_description.txt -d ./out --skill-folder --check --check-strict
 
-# Output: .claude/skills/<role>/SKILL.md — drop it into your project
+# Or check separately after forge
+agentforge check ./out/*/SKILL.md --domain "your domain" --strict
+agentforge identity validate ./out/*.yaml
+
+# Drop the skill folder into your project (.claude/skills/)
 ```
-
 ---
 
 ## Core Concepts
@@ -189,6 +192,13 @@ agentforge audit output/SKILL.md --domain finance            # Safety guardrail 
 agentforge audit output/SKILL.md --fix -o fixed.md           # Auto-fix missing guardrails
 agentforge cost output/SKILL.md --daily-calls 100            # Token cost projection
 agentforge prompt-diff old.md new.md                         # Section-by-section diff
+
+# Day-2 (after the agent is live)
+agentforge drill scan ./skill-dir
+agentforge drill propose ./skill-dir
+agentforge drill apply ./skill-dir --yes --only prune_tools
+agentforge market trends ./jds/
+agentforge market gap ./jds/ --skill-dir ./skill-dir
 ```
 
 ---

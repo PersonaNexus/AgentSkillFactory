@@ -3,6 +3,9 @@
 Sanitized example input/output package generated from AgentForge fixture data.
 Used as the **public golden path** for CI (schema + layout + quality gates).
 
+Install the factory from PyPI as `personanexus-agentforge` (CLI: `agentforge`),
+or use `uv run` from a source checkout as below.
+
 ## Layout
 
 ```text
