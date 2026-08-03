@@ -574,6 +574,33 @@ identity_app = typer.Typer(help="PersonaNexus identity management.")
 app.add_typer(identity_app, name="identity")
 
 
+@identity_app.command("validate")
+def identity_validate(
+    identity_file: Path = typer.Argument(..., help="Path to PersonaNexus identity YAML"),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
+) -> None:
+    """Validate a PersonaNexus identity YAML without regenerating skills.
+
+    Examples:
+        agentforge identity validate agent_identity.yaml
+        agentforge identity validate examples/.../identity.yaml --format json
+    """
+    from agentforge.analysis.skill_check import validate_identity_yaml
+
+    if not identity_file.exists():
+        console.print(f"[red]Error:[/red] File not found: {identity_file}")
+        raise typer.Exit(code=1)
+
+    ok, message = validate_identity_yaml(identity_file.read_text(encoding="utf-8"))
+    if format == "json":
+        console.print(json.dumps({"valid": ok, "message": message, "path": str(identity_file)}))
+    elif ok:
+        console.print(Panel(f"[green]{message}[/green]", title="Identity Valid", border_style="green"))
+    else:
+        console.print(Panel(f"[red]{message}[/red]", title="Identity Invalid", border_style="red"))
+        raise typer.Exit(code=1)
+
+
 @identity_app.command("import")
 def identity_import(
     identity_file: Path = typer.Argument(..., help="Path to PersonaNexus identity YAML"),
