@@ -147,7 +147,7 @@ def structural_digest(
             except Exception:  # noqa: BLE001
                 frontmatter = {}
 
-    frontmatter_keys = sorted(str(k) for k in frontmatter.keys())
+    frontmatter_keys = sorted(str(k) for k in frontmatter)
     fm_name = frontmatter.get("name")
     frontmatter_name = fm_name if isinstance(fm_name, str) else ""
 
@@ -158,7 +158,7 @@ def structural_digest(
     try:
         id_data = yaml.safe_load(identity_yaml) or {}
         if isinstance(id_data, dict):
-            identity_keys = sorted(str(k) for k in id_data.keys())
+            identity_keys = sorted(str(k) for k in id_data)
     except Exception:  # noqa: BLE001
         identity_keys = []
 
