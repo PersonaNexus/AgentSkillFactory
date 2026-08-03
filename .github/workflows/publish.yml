@@ -1,10 +1,12 @@
 name: Publish to PyPI
 
 # Build always runs. Upload runs on release (or workflow_dispatch with dry_run=false).
-# Upload requires either:
-#   - Trusted publishing (OIDC) for this repo + environment "pypi", or
-#   - Repository secret PYPI_TOKEN
-# See CONTRIBUTING.md → Publishing to PyPI.
+# Uses pypa/gh-action-pypi-publish for OIDC trusted publishing (pending publisher OK).
+# Fallback: repository secret PYPI_TOKEN.
+#
+# PyPI project name: personanexus-agentforge
+# Pending publisher must match:
+#   Owner: PersonaNexus | Repo: agentforge | Workflow: publish.yml | Env: pypi
 
 on:
   release:
@@ -18,7 +20,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   build:
@@ -52,6 +53,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: pypi
+    # OIDC for trusted publishing
+    permissions:
+      contents: read
+      id-token: write
     if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
     steps:
       - name: Download dist artifacts
@@ -60,49 +65,11 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
-
-      - name: Publish to PyPI
-        env:
-          # Prefer token if present; otherwise uv uses OIDC trusted publishing.
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -n "${UV_PUBLISH_TOKEN:-}" ]; then
-            echo "Publishing with PYPI_TOKEN secret..."
-            uv publish --token "$UV_PUBLISH_TOKEN"
-            exit 0
-          fi
-
-          echo "No PYPI_TOKEN secret — attempting trusted publishing (OIDC)..."
-          if uv publish; then
-            exit 0
-          fi
-
-          cat <<'EOF'
-          ::error::PyPI upload failed — publishing credentials are not configured.
-
-          The package *build* job succeeded. Only the upload step needs setup.
-
-          Option A — Trusted publishing (recommended)
-            1. GitHub → Settings → Environments → create environment named: pypi
-            2. https://pypi.org → project "personanexus-agentforge" → Publishing
-               (create the project on first upload if needed)
-               - Owner: PersonaNexus
-               - Repository: agentforge
-               - Workflow name: publish.yml
-               - Environment name: pypi
-            3. Re-run this workflow (or re-publish the GitHub Release)
-
-          Option B — API token
-            1. Create a PyPI API token for project personanexus-agentforge
-            2. GitHub → Settings → Secrets → Actions → add PYPI_TOKEN
-            3. Re-run this workflow
-
-          Note: PyPI name is personanexus-agentforge (not bare agentforge —
-          that name is taken by an unrelated package). CLI/import stay agentforge.
-
-          Docs: CONTRIBUTING.md
-          EOF
-          exit 1
+      - name: Publish to PyPI (trusted publishing / token)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # If PYPI_TOKEN is set, password auth is used; otherwise OIDC.
+          password: ${{ secrets.PYPI_TOKEN }}
+          packages-dir: dist/
+          verbose: true
+          # print-hash: true
