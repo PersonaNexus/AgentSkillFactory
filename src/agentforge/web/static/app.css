@@ -917,6 +917,81 @@
     opacity: 0.5;
 }
 
+/* Quality check config (forge wizard step 2) */
+.config-quality-check {
+    margin: 1rem 0 1.25rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--af-blue) 4%, transparent);
+}
+.config-quality-check .config-label-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+.config-quality-check input[type="text"] {
+    margin-bottom: 0.25rem;
+}
+
+/* Quality check results panel */
+.quality-check-panel {
+    margin: 0 0 1.25rem;
+    padding: 1rem 1.15rem;
+    border-radius: 12px;
+    border: 2px solid var(--pico-muted-border-color);
+}
+.quality-check-pass {
+    border-color: var(--af-green);
+    background: color-mix(in srgb, var(--af-green) 6%, transparent);
+}
+.quality-check-fail {
+    border-color: var(--af-red);
+    background: color-mix(in srgb, var(--af-red) 6%, transparent);
+}
+.quality-check-skipped {
+    opacity: 0.75;
+}
+.quality-check-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.quality-check-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    color: var(--af-text-on-color);
+    background: var(--af-blue);
+}
+.quality-check-pass .quality-check-badge { background: var(--af-green-dark); }
+.quality-check-fail .quality-check-badge { background: var(--af-red); }
+.quality-check-title {
+    font-weight: 700;
+    font-size: 1rem;
+}
+.quality-check-meta {
+    font-size: 0.8rem;
+    opacity: 0.65;
+    margin-left: auto;
+}
+.quality-check-summary {
+    margin: 0.35rem 0 0.5rem 1.1rem;
+    font-size: 0.9rem;
+}
+.quality-check-hint {
+    font-size: 0.8rem;
+    opacity: 0.6;
+}
+.quality-check-body {
+    font-size: 0.9rem;
+}
+
 /* Results: success hero */
 .forge-success-hero {
     text-align: center;
@@ -925,6 +1000,10 @@
     border: 2px solid var(--af-green);
     border-radius: 16px;
     background: color-mix(in srgb, var(--af-green) 5%, transparent);
+}
+.forge-success-hero-warn {
+    border-color: var(--af-orange);
+    background: color-mix(in srgb, var(--af-orange) 6%, transparent);
 }
 .forge-success-icon {
     font-size: 3rem;

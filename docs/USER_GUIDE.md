@@ -81,12 +81,12 @@ The main workflow — a 4-step wizard:
 - **Output format**: Claude Code, ClawHub, or both
 - **Personality sliders**: override auto-detected traits (leave untouched to use LLM suggestions)
 - **Anonymize**: replace company names with generic equivalents
+- **Quality check** (on by default): same gate as CLI `forge --check` — lint + size; optional **strict** mode matches `--check-strict`
 - **Enhance quality**: paste real-world examples and frameworks you use — this is the single biggest quality lever
 
-**Step 3: Forge** — watch real-time progress as each pipeline stage completes
+**Step 3: Forge** — watch real-time progress as each pipeline stage completes (including quality check)
 
-**Step 4: Download** — get SKILL.md, ClawHub skill, ZIP folder, or view inline previews. Also shows tool profile summary, skill gap analysis, and agent team composition.
-
+**Step 4: Download** — get SKILL.md, ClawHub skill, ZIP folder, or view inline previews. Shows a **quality check** pass/fail panel, tool profile summary, skill gap analysis, and agent team composition.
 ### Batch
 
 Process multiple JDs at once:

@@ -784,7 +784,8 @@ document.getElementById('extract-form').addEventListener('submit', async (e) => 
 const FORGE_STAGE_LABELS = {
     ingest: 'Parsing file', anonymize: 'Anonymizing names', extract: 'Extracting skills', methodology: 'Extracting methodology',
     map: 'Mapping traits', culture: 'Applying culture', generate: 'Generating skill',
-    analyze: 'Running gap analysis', deep_analyze: 'Running deep analysis', team_compose: 'Composing agent team'
+    analyze: 'Running gap analysis', deep_analyze: 'Running deep analysis', team_compose: 'Composing agent team',
+    check: 'Quality check',
 };
 
 // Wizard step navigation
@@ -930,7 +931,7 @@ function updateTraitOverridesInput() {
     }
 }
 
-function initForgeStages(mode, anonymize) {
+function initForgeStages(mode, anonymize, runCheck) {
     const container = document.getElementById('forge-stages');
     let stages = ['ingest'];
     if (anonymize) stages.push('anonymize');
@@ -938,6 +939,7 @@ function initForgeStages(mode, anonymize) {
     if (mode === 'default') stages.push('map', 'culture', 'generate', 'analyze', 'team_compose');
     else if (mode === 'deep') stages.push('map', 'culture', 'generate', 'deep_analyze', 'team_compose');
     else stages.push('generate', 'team_compose');
+    if (runCheck) stages.push('check');
 
     container.innerHTML = stages.map(s =>
         `<div class="forge-stage-row stage-pending" id="stage-${s}">
@@ -1013,7 +1015,11 @@ async function startForge() {
     formData.delete('salary_max');
     const mode = formData.get('mode');
     const anonymize = formData.get('anonymize') === 'true';
-    initForgeStages(mode, anonymize);
+    // Unchecked checkboxes are omitted from FormData — send explicit false.
+    const runCheck = formData.get('run_check') === 'true' || formData.get('check_strict') === 'true';
+    if (!formData.has('run_check')) formData.set('run_check', 'false');
+    if (!formData.has('check_strict')) formData.set('check_strict', 'false');
+    initForgeStages(mode, anonymize, runCheck);
 
     try {
         const resp = await fetch('/api/forge', { method: 'POST', body: formData });
@@ -1048,20 +1054,58 @@ async function startForge() {
     }
 }
 
+function renderQualityCheckPanel(qc) {
+    if (!qc) return '';
+    if (qc.skipped) {
+        return `<div class="quality-check-panel quality-check-skipped" id="forge-quality-check">
+            <div class="quality-check-header">
+                <span class="quality-check-badge">SKIPPED</span>
+                <span class="quality-check-title">Skill quality check</span>
+            </div>
+            <div class="quality-check-body">${esc(qc.reason || 'Check skipped')}</div>
+        </div>`;
+    }
+    const passed = !!qc.passed;
+    const badge = passed ? 'PASSED' : 'FAILED';
+    const cls = passed ? 'quality-check-pass' : 'quality-check-fail';
+    const mode = qc.strict ? 'strict' : 'default';
+    const domain = qc.domain || 'general';
+    const lines = (qc.summary || []).map(l => `<li>${esc(l)}</li>`).join('');
+    return `<div class="quality-check-panel ${cls}" id="forge-quality-check">
+        <div class="quality-check-header">
+            <span class="quality-check-badge">${badge}</span>
+            <span class="quality-check-title">Skill quality check</span>
+            <span class="quality-check-meta">mode: ${esc(mode)} · domain: ${esc(domain)}</span>
+        </div>
+        <ul class="quality-check-summary">${lines}</ul>
+        <div class="quality-check-hint">Same gate as <code>agentforge check</code>${qc.strict ? ' --strict' : ''}.</div>
+    </div>`;
+}
+
 function renderForgeResults(data, jobId, salaryMin, salaryMax) {
     const bp = data.blueprint;
     const results = document.getElementById('forge-results');
     const skillName = data.skill_folder ? data.skill_folder.skill_name : 'skill';
     const skillMd = data.skill_folder ? data.skill_folder.skill_md : '';
+    const qc = data.quality_check;
+    const checkFailed = qc && !qc.skipped && qc.passed === false;
 
     let html = '';
 
-    // Success hero
-    html += `<div class="forge-success-hero">
-        <div class="forge-success-icon">&#10003;</div>
+    // Success hero (amber/red tint if quality check failed)
+    const heroClass = checkFailed ? 'forge-success-hero forge-success-hero-warn' : 'forge-success-hero';
+    const heroIcon = checkFailed ? '&#9888;' : '&#10003;';
+    const readyLabel = checkFailed
+        ? 'forged — quality check failed (review before shipping)'
+        : 'ready';
+    html += `<div class="${heroClass}">
+        <div class="forge-success-icon">${heroIcon}</div>
         <div class="forge-success-title">${esc(bp.extraction.role.title)}</div>
-        <div class="forge-success-subtitle">${data.clawhub_skill && data.skill_folder ? 'Your Claude Code &amp; ClawHub skills are' : data.clawhub_skill ? 'Your ClawHub skill is' : 'Your Claude Code skill <code>' + esc(skillName) + '</code> is'} ready</div>
+        <div class="forge-success-subtitle">${data.clawhub_skill && data.skill_folder ? 'Your Claude Code &amp; ClawHub skills are' : data.clawhub_skill ? 'Your ClawHub skill is' : 'Your Claude Code skill <code>' + esc(skillName) + '</code> is'} ${readyLabel}</div>
     </div>`;
+
+    // Quality check panel (CLI parity)
+    html += renderQualityCheckPanel(qc);
 
     // Stats bar
     html += `<div class="forge-stats">
@@ -1369,12 +1413,28 @@ async function refineSkill(jobId) {
             }
         }
 
+        // Refresh quality check panel after refine
+        if (result.quality_check) {
+            if (_lastForgeResult) _lastForgeResult.quality_check = result.quality_check;
+            const existing = document.getElementById('forge-quality-check');
+            const panelHtml = renderQualityCheckPanel(result.quality_check);
+            if (existing && panelHtml) {
+                const wrap = document.createElement('div');
+                wrap.innerHTML = panelHtml;
+                existing.replaceWith(wrap.firstElementChild);
+            }
+        }
+
         // Show success feedback
         const newStatus = document.getElementById('skill-refine-status');
         if (newStatus) {
             const resolvedCount = appliedCount;
             const refMsg = result.has_references ? ' Reference files included in ZIP.' : '';
-            newStatus.innerHTML = `<div class="skill-refine-success">Applied ${resolvedCount} update${resolvedCount !== 1 ? 's' : ''} — skill regenerated.${refMsg}${remainingGaps.length === 0 ? ' All suggestions addressed!' : ''}</div>`;
+            const qc = result.quality_check;
+            const qcMsg = qc && !qc.skipped
+                ? (qc.passed ? ' Quality check: PASSED.' : ' Quality check: FAILED.')
+                : '';
+            newStatus.innerHTML = `<div class="skill-refine-success">Applied ${resolvedCount} update${resolvedCount !== 1 ? 's' : ''} — skill regenerated.${refMsg}${qcMsg}${remainingGaps.length === 0 ? ' All suggestions addressed!' : ''}</div>`;
             setTimeout(() => { if (newStatus) newStatus.innerHTML = ''; }, 5000);
         }
     } catch (err) {
