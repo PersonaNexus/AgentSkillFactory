@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,6 @@ from agentforge.drill import scan as scan_mod
 from agentforge.drill import version as version_mod
 from agentforge.drill import watch as watch_mod
 from agentforge.drill.models import SkillInventory, snapshot_path
-
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "skill-corpus" / "dev-skills"
 
@@ -63,7 +61,7 @@ def test_ingest_extracts_frontmatter_and_body_features():
 
 
 def test_ingest_is_deterministic_modulo_timestamp(tmp_path):
-    fixed = datetime(2026, 5, 3, 12, 0, 0, tzinfo=timezone.utc)
+    fixed = datetime(2026, 5, 3, 12, 0, 0, tzinfo=UTC)
     a = ingest_mod.ingest(FIXTURE_ROOT, captured_at=fixed)
     b = ingest_mod.ingest(FIXTURE_ROOT, captured_at=fixed)
     # Same fixed timestamp → identical JSON output.
@@ -146,7 +144,7 @@ def test_scan_renders_markdown_with_finding_groups():
 
 
 def test_watch_with_fewer_than_two_snapshots_returns_empty(tmp_path):
-    inv = ingest_mod.ingest(FIXTURE_ROOT, captured_at=datetime(2026, 5, 3, tzinfo=timezone.utc))
+    inv = ingest_mod.ingest(FIXTURE_ROOT, captured_at=datetime(2026, 5, 3, tzinfo=UTC))
     snap = snapshot_path(tmp_path, inv.captured_at)
     snap.parent.mkdir(parents=True, exist_ok=True)
     # Re-root the inventory at tmp_path so list_snapshots picks it up under tmp_path/.drill/.
@@ -158,7 +156,7 @@ def test_watch_with_fewer_than_two_snapshots_returns_empty(tmp_path):
 
 def test_watch_diffs_two_snapshots(tmp_path):
     """Hand-craft prior/current inventories and verify all 4 finding kinds fire."""
-    t0 = datetime(2026, 5, 3, 10, 0, 0, tzinfo=timezone.utc)
+    t0 = datetime(2026, 5, 3, 10, 0, 0, tzinfo=UTC)
     t1 = t0 + timedelta(hours=1)
 
     prior = SkillInventory.model_validate({

@@ -3,20 +3,15 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
-import pytest
-
-from tests.conftest import _make_sample_extraction
 
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     Heuristic,
     MethodologyExtraction,
     OutputTemplate,
     QualityCriterion,
     TriggerTechniqueMapping,
 )
+from tests.conftest import _make_sample_extraction
 
 
 def _make_sample_methodology() -> MethodologyExtraction:

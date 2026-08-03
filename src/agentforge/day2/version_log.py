@@ -9,11 +9,11 @@ identical. This module provides those mechanics generically over any
 from __future__ import annotations
 
 import json
-from typing import Iterable, TypeVar
+from collections.abc import Iterable
 from pathlib import Path
+from typing import TypeVar
 
 from pydantic import BaseModel
-
 
 E = TypeVar("E", bound=BaseModel)
 

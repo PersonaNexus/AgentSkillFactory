@@ -1,7 +1,7 @@
 """Data models for multi-agent team composition and orchestration."""
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any
 
 from agentforge.analysis.team_composer import AgentTeammate
 from agentforge.generation.skill_folder import SkillFolderResult

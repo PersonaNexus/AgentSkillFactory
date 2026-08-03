@@ -97,8 +97,8 @@ class ForgeFileInput(BaseModel):
 
 def _create_server():  # noqa: ANN202
     """Create the MCP server with registered tools."""
-    from mcp.server import Server
     import mcp.types as types
+    from mcp.server import Server
 
     server = Server("agentforge")
 
@@ -160,7 +160,7 @@ def _make_client(model: str):  # noqa: ANN202
 
 
 def _text_to_jd(text: str):  # noqa: ANN202
-    from agentforge.models.job_description import JobDescription, JDSection
+    from agentforge.models.job_description import JDSection, JobDescription
 
     return JobDescription(
         title="(provided via MCP)",

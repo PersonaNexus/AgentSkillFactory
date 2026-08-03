@@ -5,21 +5,18 @@ from __future__ import annotations
 import json
 
 import yaml
-import pytest
 from personanexus.types import AgentIdentity
 
 from agentforge.generation.identity_generator import IdentityGenerator
 from agentforge.generation.skill_file import SkillFileGenerator
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SkillCategory,
-    SkillImportance,
-    SkillProficiency,
     SuggestedTraits,
 )
-from agentforge.models.job_description import JobDescription, JDSource
+from agentforge.models.job_description import JDSource, JobDescription
 
 
 class TestIdentityGenerator:

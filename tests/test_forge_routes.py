@@ -5,7 +5,6 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,7 +13,6 @@ pytestmark = pytest.mark.web
 
 from agentforge.web.app import create_app
 from agentforge.web.jobs import Job, JobStore
-
 
 # ---------------------------------------------------------------------------
 # Helpers — build a minimal completed job result matching the real shape
@@ -633,7 +631,9 @@ class TestSkillRefiner:
 
     def _make_extraction(self):
         from agentforge.models.extracted_skills import (
-            ExtractionResult, ExtractedRole, ExtractedSkill,
+            ExtractedRole,
+            ExtractedSkill,
+            ExtractionResult,
             SuggestedTraits,
         )
         return ExtractionResult(

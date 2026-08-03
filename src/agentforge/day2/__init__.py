@@ -13,15 +13,15 @@ to the shared renderers/loaders.
 """
 
 from agentforge.day2.cli_validators import validate_dir
-from agentforge.day2.frontmatter import (
-    FRONTMATTER_RE,
-    FrontmatterParseError,
-    split_frontmatter,
-)
 from agentforge.day2.finding_render import (
     SeverityCounts,
     count_severities,
     render_findings_markdown,
+)
+from agentforge.day2.frontmatter import (
+    FRONTMATTER_RE,
+    FrontmatterParseError,
+    split_frontmatter,
 )
 from agentforge.day2.safe_io import (
     DEFAULT_MAX_INGEST_BYTES,
@@ -32,9 +32,13 @@ from agentforge.day2.safe_io import (
 from agentforge.day2.vcs import git_state, try_rev_parse
 from agentforge.day2.version_log import (
     annotate_latest as annotate_latest_version,
+)
+from agentforge.day2.version_log import (
     commit_label,
-    load_versions as load_jsonl_versions,
     render_version_log,
+)
+from agentforge.day2.version_log import (
+    load_versions as load_jsonl_versions,
 )
 
 __all__ = [

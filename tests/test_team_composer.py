@@ -2,17 +2,15 @@
 
 from __future__ import annotations
 
-import pytest
-
 from agentforge.analysis.team_composer import (
     AgentTeamComposition,
     AgentTeammate,
     TeamComposer,
 )
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SkillCategory,
     SkillImportance,
     SkillProficiency,
@@ -178,9 +176,9 @@ class TestTeamComposer:
         composer = TeamComposer()
         team = composer.compose(result)
 
-        archetypes = [t.archetype for t in team.teammates]
         # Should have at least one data-related and one content-related teammate
         assert len(team.teammates) >= 2
+        assert all(t.archetype for t in team.teammates)
 
 
 class TestAgentTeammate:

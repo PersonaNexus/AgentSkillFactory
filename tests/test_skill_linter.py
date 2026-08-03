@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import re
-import textwrap
-
 import pytest
 
-from agentforge.analysis.skill_linter import LintIssue, LintReport, SkillLinter
+from agentforge.analysis.skill_linter import LintReport, SkillLinter
 from agentforge.generation.skill_file import SkillFileGenerator
 from tests.conftest import _make_sample_extraction
 

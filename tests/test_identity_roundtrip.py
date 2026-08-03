@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import json
 import tempfile
 from pathlib import Path
 
@@ -14,15 +13,10 @@ from agentforge.generation.identity_generator import IdentityGenerator
 from agentforge.generation.identity_loader import IdentityLoader
 from agentforge.models.extracted_skills import (
     ExtractionResult,
-    ExtractedRole,
-    ExtractedSkill,
     MethodologyExtraction,
-    SeniorityLevel,
     SkillCategory,
-    SkillImportance,
     SkillProficiency,
 )
-
 
 # ------------------------------------------------------------------
 # Fixtures
@@ -191,8 +185,9 @@ class TestImportRoute:
 
     @pytest.fixture
     def client(self):
-        from agentforge.web.app import create_app
         from starlette.testclient import TestClient
+
+        from agentforge.web.app import create_app
 
         app = create_app()
         return TestClient(app)

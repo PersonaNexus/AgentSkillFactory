@@ -12,10 +12,9 @@ of an unchanged agent produce identical (modulo timestamp) snapshots.
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -324,7 +323,7 @@ def ingest(agent_dir: Path, captured_at: datetime | None = None) -> PersonaSnaps
     agent_dir = agent_dir.resolve()
     if not agent_dir.is_dir():
         raise ValueError(f"not a directory: {agent_dir}")
-    captured_at = captured_at or datetime.now(timezone.utc)
+    captured_at = captured_at or datetime.now(UTC)
 
     notes: list[str] = []
     soul_path = agent_dir / "SOUL.md"

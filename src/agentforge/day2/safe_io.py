@@ -11,9 +11,8 @@ Prevents two minor abuse vectors flagged in the day-2+ security pass:
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
-
 
 # 5 MB. Real SKILL.md / SOUL.md are kilobytes; anything past this is an
 # attack or a mistake. Configurable by callers if they need a different cap.

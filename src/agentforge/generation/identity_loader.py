@@ -6,15 +6,13 @@ AgentForge's refine pipeline, and export it back as a valid PersonaNexus YAML.
 
 from __future__ import annotations
 
-from typing import Any
-
 import yaml
 from personanexus.types import AgentIdentity
 
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     MethodologyExtraction,
     SeniorityLevel,
     SkillCategory,
@@ -22,7 +20,6 @@ from agentforge.models.extracted_skills import (
     SkillProficiency,
     SuggestedTraits,
 )
-
 
 # Reverse mappings (inverse of what RoleMapper/TraitMapper use)
 _REGISTER_TO_SENIORITY: dict[str, SeniorityLevel] = {

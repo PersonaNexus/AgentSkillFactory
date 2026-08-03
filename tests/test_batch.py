@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from agentforge.models.blueprint import AgentBlueprint
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     MethodologyExtraction,
     SkillCategory,
     SkillProficiency,

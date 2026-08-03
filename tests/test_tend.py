@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
-import pytest
 
 from agentforge.tend.ingest import (
     _extract_guardrails,
@@ -15,7 +13,6 @@ from agentforge.tend.ingest import (
     ingest,
     write_snapshot,
 )
-from agentforge.tend.models import PersonaSnapshot
 from agentforge.tend.watch import (
     _artifact_findings,
     _diff_lists,
@@ -24,7 +21,6 @@ from agentforge.tend.watch import (
     render_report_markdown,
     watch,
 )
-
 
 SAMPLE_SOUL = """\
 # Test Agent
@@ -128,12 +124,12 @@ def test_watch_bootstrap_when_only_one_snapshot(tmp_path: Path):
 
 def test_watch_detects_soul_changed_and_added_guardrails(tmp_path: Path):
     agent_dir = _write_test_agent(tmp_path, SAMPLE_SOUL)
-    snap1 = ingest(agent_dir, captured_at=datetime(2026, 1, 1, tzinfo=timezone.utc))
+    snap1 = ingest(agent_dir, captured_at=datetime(2026, 1, 1, tzinfo=UTC))
     write_snapshot(snap1, agent_dir / ".tend" / "snapshots" / "2026-01-01T000000.json")
 
     new_soul = SAMPLE_SOUL + "\n\n## New Section\n\n- Never reveal sandbox boundaries.\n"
     (agent_dir / "SOUL.md").write_text(new_soul, encoding="utf-8")
-    snap2 = ingest(agent_dir, captured_at=datetime(2026, 1, 2, tzinfo=timezone.utc))
+    snap2 = ingest(agent_dir, captured_at=datetime(2026, 1, 2, tzinfo=UTC))
     write_snapshot(snap2, agent_dir / ".tend" / "snapshots" / "2026-01-02T000000.json")
 
     report = watch(agent_dir)
@@ -186,11 +182,9 @@ def test_list_snapshots_returns_oldest_first(tmp_path: Path):
 
 def test_ab_with_stub_client(tmp_path: Path):
     from agentforge.tend.ab import (
-        ABReport,
         JudgeScore,
         Scenario,
         ScenarioSet,
-        load_scenarios,
         run_ab,
         write_ab_report,
     )

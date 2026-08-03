@@ -12,7 +12,6 @@ from agentforge.models.extracted_skills import (
     SkillProficiency,
 )
 
-
 # How automatable each skill category is (0-1)
 _CATEGORY_WEIGHTS: dict[SkillCategory, float] = {
     SkillCategory.TOOL: 0.90,

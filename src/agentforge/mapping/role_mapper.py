@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedSkill,
+    ExtractionResult,
     SeniorityLevel,
     SkillCategory,
     SkillImportance,
@@ -60,7 +60,7 @@ class RoleMapper:
 
     def build_metadata(self, extraction: ExtractionResult) -> dict:
         """Build PersonaNexus metadata section."""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         return {
             "id": _generate_agent_id(extraction.role.title),
             "name": extraction.role.title.replace(" ", ""),

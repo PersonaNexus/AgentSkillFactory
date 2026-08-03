@@ -18,5 +18,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
+# Non-loopback bind requires AGENTFORGE_API_TOKEN at runtime
+# (or AGENTFORGE_API_TOKEN=disabled for explicit opt-out).
 ENTRYPOINT ["agentforge"]
 CMD ["serve", "--host", "0.0.0.0", "--no-open"]

@@ -5,15 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
 import yaml
 from typer.testing import CliRunner
 
 from agentforge.cli import app
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SkillCategory,
     SkillProficiency,
     SuggestedTraits,
@@ -215,8 +214,9 @@ class TestIngestFile:
 
     def test_ingest_docx_dispatches(self, tmp_path):
         """Test that .docx extension dispatches to docx ingester."""
-        from agentforge.cli import _ingest_file
         from docx import Document
+
+        from agentforge.cli import _ingest_file
 
         docx_path = tmp_path / "test.docx"
         doc = Document()
@@ -450,7 +450,7 @@ class TestExtractErrorHandling:
 class TestInitCommand:
     def test_init_command(self):
         """Test init command with mocked prompts."""
-        with patch("agentforge.config.save_config") as mock_save, \
+        with patch("agentforge.config.save_config"), \
              patch("agentforge.config.load_config", side_effect=Exception("no config")), \
              patch("anthropic.Anthropic"):
             result = runner.invoke(app, ["init"], input=(
@@ -469,6 +469,7 @@ class TestIngestPDF:
     def test_ingest_pdf_via_cli(self, tmp_path):
         """Test that _ingest_file dispatches to PDF ingestion."""
         import fitz
+
         from agentforge.cli import _ingest_file
 
         pdf_path = tmp_path / "job.pdf"
@@ -487,6 +488,7 @@ class TestMakeClient:
         """Test that missing API key shows helpful error."""
         import os
         from unittest.mock import patch
+
         from agentforge.config import AgentForgeConfig
 
         old_ant = os.environ.pop("ANTHROPIC_API_KEY", None)

@@ -13,9 +13,10 @@ surfaces degrade to deterministic fallbacks.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +27,7 @@ from agentforge.department.conductor import (
     render_conductor_skill_md,
     render_conductor_yaml,
 )
-from agentforge.department.handoffs import HandoffGraph, detect_handoffs, render_orchestration_yaml
+from agentforge.department.handoffs import detect_handoffs, render_orchestration_yaml
 from agentforge.department.readme import render_readme
 from agentforge.department.synthesize import extract_corpus
 from agentforge.generation.identity_generator import IdentityGenerator
@@ -66,7 +67,7 @@ class TeamArtifacts(BaseModel):
     handoff_count: int = 0
     shared_cluster_count: int = 0
     generated_at: str = Field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat(timespec="seconds")
+        default_factory=lambda: datetime.now(UTC).isoformat(timespec="seconds")
     )
 
 
@@ -204,7 +205,7 @@ def synthesize_team(
     department_name: str | None = None,
     extract: Callable[[JDEntry], ExtractionResult] | None = None,
     extractions: dict[str, ExtractionResult] | None = None,
-    client: "LLMClient | None" = None,
+    client: LLMClient | None = None,
     use_llm_handoffs: bool = False,
     use_llm_brief: bool = False,
     target: str = "claude-code",

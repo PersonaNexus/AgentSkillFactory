@@ -7,17 +7,15 @@ generation, shared resources, conductor, orchestration.yaml).
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable
 
 from agentforge.corpus import Corpus, JDEntry, load_corpus
 from agentforge.corpus import cache as corpus_cache
 from agentforge.department.cluster import SkillLandscape, cluster_skills
 from agentforge.models.extracted_skills import ExtractionResult
 from agentforge.models.job_description import JobDescription
-
 
 # Caller-supplied extractor signature: (JDEntry) -> ExtractionResult.
 # Defined as a callable so tests can pass a stub without touching the LLM.
@@ -86,12 +84,12 @@ def render_report_markdown(
 ) -> str:
     """Render a human-readable skill-landscape report."""
     lines: list[str] = [
-        f"# department — skill landscape",
+        "# department — skill landscape",
         "",
         f"- Corpus: `{corpus.root}`",
         f"- Roles ({landscape.role_count}): "
         + ", ".join(f"`{r}`" for r in landscape.role_ids),
-        f"- Generated: {datetime.now(timezone.utc).isoformat(timespec='seconds')}",
+        f"- Generated: {datetime.now(UTC).isoformat(timespec='seconds')}",
         "",
         "## Per-role summary",
         "",

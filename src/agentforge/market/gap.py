@@ -17,7 +17,7 @@ what fraction does the agent cover?
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -95,7 +95,7 @@ class GapReport(BaseModel):
         return [*self.market_only, *self.agent_only, *self.shared]
 
 
-def _agent_skill_keys(inventory: "SkillInventory") -> dict[str, list[str]]:
+def _agent_skill_keys(inventory: SkillInventory) -> dict[str, list[str]]:
     """Map normalized skill name → list of agent skill slugs that have it.
 
     Each agent skill contributes multiple keys: its slug, any frontmatter
@@ -126,7 +126,7 @@ def _agent_skill_keys(inventory: "SkillInventory") -> dict[str, list[str]]:
     return out
 
 
-def _slug_keys(inventory: "SkillInventory") -> dict[str, str]:
+def _slug_keys(inventory: SkillInventory) -> dict[str, str]:
     """Map normalized slug → original slug. Used to find truly agent-only
     skills (the slug itself never appearing in the market landscape)."""
     out: dict[str, str] = {}
@@ -146,8 +146,8 @@ def _severity_for_market_gap(role_count: int, importance_max: str | None) -> str
 
 
 def compute_gap(
-    landscape: "SkillLandscape",
-    inventory: "SkillInventory",
+    landscape: SkillLandscape,
+    inventory: SkillInventory,
     *,
     coverage_role_threshold: int = DEFAULT_COVERAGE_ROLE_THRESHOLD,
     corpus_root: str | None = None,
@@ -233,7 +233,7 @@ def compute_gap(
     return GapReport(
         corpus_root=corpus_root or "",
         agent_skill_dir=inventory.skill_dir,
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
         coverage_score=round(coverage_score, 3),
         coverage_role_threshold=coverage_role_threshold,
         market_only=market_only,

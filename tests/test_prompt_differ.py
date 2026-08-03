@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from agentforge.analysis.prompt_differ import PromptDiffer, PromptDiffReport, TraitDiff
+from agentforge.analysis.prompt_differ import PromptDiffer
 from agentforge.generation.skill_file import SkillFileGenerator
 from tests.conftest import _make_sample_extraction
 

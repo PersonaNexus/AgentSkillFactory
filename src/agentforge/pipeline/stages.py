@@ -345,9 +345,9 @@ class TestStage(PipelineStage):
     name = "test"
 
     def run(self, context: dict[str, Any]) -> dict[str, Any]:
+        from agentforge.testing.evaluator import Evaluator
         from agentforge.testing.scenario_generator import ScenarioGenerator
         from agentforge.testing.skill_runner import SkillRunner
-        from agentforge.testing.evaluator import Evaluator
 
         skill_folder = context.get("skill_folder")
         if not skill_folder:

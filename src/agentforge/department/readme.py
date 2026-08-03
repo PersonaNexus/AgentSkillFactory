@@ -23,10 +23,10 @@ if TYPE_CHECKING:
 
 def _deterministic_readme(
     department_name: str,
-    corpus: "Corpus",
-    extractions: dict[str, "ExtractionResult"],
-    landscape: "SkillLandscape",
-    graph: "HandoffGraph",
+    corpus: Corpus,
+    extractions: dict[str, ExtractionResult],
+    landscape: SkillLandscape,
+    graph: HandoffGraph,
 ) -> str:
     lines = [
         f"# {department_name.title()} Department",
@@ -112,10 +112,10 @@ _BRIEF_SYSTEM = (
 
 def _llm_team_brief(
     department_name: str,
-    corpus: "Corpus",
-    extractions: dict[str, "ExtractionResult"],
-    graph: "HandoffGraph",
-    client: "LLMClient",
+    corpus: Corpus,
+    extractions: dict[str, ExtractionResult],
+    graph: HandoffGraph,
+    client: LLMClient,
 ) -> str:
     role_lines = []
     for entry in corpus:
@@ -137,11 +137,11 @@ def _llm_team_brief(
 
 def render_readme(
     department_name: str,
-    corpus: "Corpus",
-    extractions: dict[str, "ExtractionResult"],
-    landscape: "SkillLandscape",
-    graph: "HandoffGraph",
-    client: "LLMClient | None" = None,
+    corpus: Corpus,
+    extractions: dict[str, ExtractionResult],
+    landscape: SkillLandscape,
+    graph: HandoffGraph,
+    client: LLMClient | None = None,
 ) -> str:
     """Render the department README. ``client`` enables an LLM team brief."""
     base = _deterministic_readme(department_name, corpus, extractions, landscape, graph)

@@ -98,7 +98,7 @@ def _run_batch(
 
         job.emit_done({"results": results_data, "files": output_files})
 
-    except Exception as e:
+    except Exception:
         import logging
         logging.getLogger(__name__).exception("Batch processing failed")
         job.emit_error("Batch processing failed: an internal error occurred")

@@ -1,7 +1,8 @@
 """Evaluate skill test results using LLM-as-judge."""
 from __future__ import annotations
-import json
+
 from pydantic import BaseModel, Field
+
 from agentforge.testing.models import (
     CriterionScore,
     ScoredExecution,

@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-import pytest
-
 from agentforge.analysis.prompt_size_analyzer import (
     PromptSizeAnalyzer,
-    PromptSizeReport,
-    SectionMetrics,
     _estimate_tokens,
 )
 from agentforge.generation.identity_generator import IdentityGenerator
 from agentforge.generation.skill_file import SkillFileGenerator
 from tests.conftest import _make_sample_extraction
-
 
 # ---------------------------------------------------------------------------
 # Helpers

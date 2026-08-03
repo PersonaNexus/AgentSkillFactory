@@ -1,5 +1,6 @@
 """Generate test scenarios from extraction results."""
 from __future__ import annotations
+
 from agentforge.models.extracted_skills import ExtractionResult, MethodologyExtraction
 from agentforge.testing.models import TestScenario
 
@@ -95,7 +96,6 @@ class ScenarioGenerator:
 
         # Ambiguous request
         if extraction.role.scope_primary:
-            scope = extraction.role.scope_primary[0]
             scenarios.append(TestScenario(
                 name="edge: ambiguous request",
                 input_prompt="Can you help me with something?",

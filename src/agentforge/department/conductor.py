@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from agentforge.models.extracted_skills import ExtractionResult
 
 
-def _role_brief(entry, extraction: "ExtractionResult | None") -> dict:
+def _role_brief(entry, extraction: ExtractionResult | None) -> dict:
     """One-line entry per role used in the conductor's routing table."""
     purpose = (extraction.role.purpose if extraction else "") or ""
     return {
@@ -31,9 +31,9 @@ def _role_brief(entry, extraction: "ExtractionResult | None") -> dict:
 
 
 def build_conductor_identity(
-    corpus: "Corpus",
-    extractions: dict[str, "ExtractionResult"],
-    graph: "HandoffGraph",
+    corpus: Corpus,
+    extractions: dict[str, ExtractionResult],
+    graph: HandoffGraph,
     department_name: str,
 ) -> dict:
     """Build a conductor identity dict (PersonaNexus-shaped)."""
@@ -101,9 +101,9 @@ def render_conductor_yaml(identity: dict) -> str:
 
 def render_conductor_skill_md(
     department_name: str,
-    corpus: "Corpus",
-    extractions: dict[str, "ExtractionResult"],
-    graph: "HandoffGraph",
+    corpus: Corpus,
+    extractions: dict[str, ExtractionResult],
+    graph: HandoffGraph,
 ) -> str:
     """A minimal SKILL.md for the conductor — routing rules + handoff table."""
     lines = [

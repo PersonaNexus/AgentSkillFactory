@@ -112,8 +112,10 @@ print(context["identity_yaml"])
 ## REST API
 
 ```bash
-agentforge serve                     # http://localhost:8000
-agentforge serve --host 0.0.0.0      # expose to network
+agentforge serve                     # http://localhost:8000 (loopback; auth optional)
+# Non-loopback binds require a token:
+export AGENTFORGE_API_TOKEN=$(openssl rand -hex 32)
+agentforge serve --host 0.0.0.0 --no-open
 ```
 
 Key endpoints:
@@ -131,6 +133,8 @@ Key endpoints:
 ## Docker
 
 ```bash
+export AGENTFORGE_API_TOKEN=$(openssl rand -hex 32)
+export ANTHROPIC_API_KEY=sk-ant-...
 docker compose up                    # builds and starts on :8000
 ```
 
@@ -138,8 +142,13 @@ Or build manually:
 
 ```bash
 docker build -t agentforge .
-docker run -p 8000:8000 -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY agentforge
+docker run -p 8000:8000 \
+  -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  -e AGENTFORGE_API_TOKEN=$AGENTFORGE_API_TOKEN \
+  agentforge
 ```
+
+See [SECURITY.md](SECURITY.md) for auth defaults.
 
 ## MCP Server (agent-to-agent)
 

@@ -17,14 +17,11 @@ from agentforge.pipeline.stages import (
     IngestStage,
     MapStage,
     MethodologyStage,
-    MultiIngestStage,
     OpenClawCompileStage,
     PersonaNexusDeploymentCompileStage,
     PipelineStage,
-    SupplementScoreStage,
     TeamComposeStage,
     TeamForgeStage,
-    TestStage,
     ToolMapStage,
 )
 
@@ -40,12 +37,12 @@ class ForgePipeline:
         self.stages: list[PipelineStage] = []
         self._skipped: set[str] = set()
 
-    def add_stage(self, stage: PipelineStage) -> "ForgePipeline":
+    def add_stage(self, stage: PipelineStage) -> ForgePipeline:
         """Add a stage to the pipeline."""
         self.stages.append(stage)
         return self
 
-    def skip_stage(self, name: str) -> "ForgePipeline":
+    def skip_stage(self, name: str) -> ForgePipeline:
         """Skip a named stage during execution."""
         self._skipped.add(name)
         return self
@@ -74,7 +71,7 @@ class ForgePipeline:
         )
 
     @classmethod
-    def default(cls) -> "ForgePipeline":
+    def default(cls) -> ForgePipeline:
         """Standard pipeline: ingest -> [anonymize] -> extract -> methodology -> map -> culture -> generate -> tool_map -> analyze -> team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
@@ -90,7 +87,7 @@ class ForgePipeline:
         return pipeline
 
     @classmethod
-    def quick(cls) -> "ForgePipeline":
+    def quick(cls) -> ForgePipeline:
         """Minimal pipeline: ingest -> [anonymize] -> extract -> methodology -> generate -> team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
@@ -102,7 +99,7 @@ class ForgePipeline:
         return pipeline
 
     @classmethod
-    def deep_analysis(cls) -> "ForgePipeline":
+    def deep_analysis(cls) -> ForgePipeline:
         """Deep analysis pipeline with per-skill scoring and priority ranking.
 
         Runs DeepAnalyzeStage *before* GenerateStage so that per-skill scores
@@ -123,7 +120,7 @@ class ForgePipeline:
         return pipeline
 
     @classmethod
-    def team(cls) -> "ForgePipeline":
+    def team(cls) -> ForgePipeline:
         """Team forge: extract once, compose team, forge each member + conductor."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
@@ -140,7 +137,7 @@ class ForgePipeline:
         return pipeline
 
     @classmethod
-    def openclaw(cls) -> "ForgePipeline":
+    def openclaw(cls) -> ForgePipeline:
         """Full pipeline with OpenClaw compilation: JD → OpenClaw-ready files."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
@@ -158,7 +155,7 @@ class ForgePipeline:
         return pipeline
 
     @classmethod
-    def personanexus_deployment(cls) -> "ForgePipeline":
+    def personanexus_deployment(cls) -> ForgePipeline:
         """Full pipeline with PersonaNexus deployment package output."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
@@ -175,7 +172,7 @@ class ForgePipeline:
         return pipeline
 
     @classmethod
-    def cron(cls) -> "ForgePipeline":
+    def cron(cls) -> ForgePipeline:
         """Pipeline for cron/scheduled agents with cron-specific enrichment."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())

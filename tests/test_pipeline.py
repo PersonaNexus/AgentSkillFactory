@@ -4,12 +4,10 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     MethodologyExtraction,
     SkillCategory,
     SkillProficiency,
@@ -19,13 +17,10 @@ from agentforge.models.tool_profile import AgentToolProfile
 from agentforge.pipeline.forge_pipeline import ForgePipeline
 from agentforge.pipeline.stages import (
     AnalyzeStage,
-    CultureStage,
     DeepAnalyzeStage,
-    ExtractStage,
     GenerateStage,
     IngestStage,
     MapStage,
-    MethodologyStage,
     PipelineStage,
 )
 
@@ -86,10 +81,6 @@ class TestForgePipeline:
     def test_skip_stage(self):
         pipeline = ForgePipeline.default()
         pipeline.skip_stage("analyze")
-
-        # Create context that skips the ingest and extract stages too
-        # (we'll mock those results)
-        context = {"input_path": "test.txt"}
 
         # Verify analyze is skipped by checking the skipped set
         assert "analyze" in pipeline._skipped

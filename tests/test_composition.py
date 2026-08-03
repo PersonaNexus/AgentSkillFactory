@@ -1,8 +1,6 @@
 """Tests for multi-agent composition and orchestration."""
 from __future__ import annotations
 
-import pytest
-
 from agentforge.analysis.team_composer import AgentTeamComposition, AgentTeammate, TeamComposer
 from agentforge.composition.conductor_generator import ConductorGenerator
 from agentforge.composition.models import (
@@ -17,17 +15,12 @@ from agentforge.composition.orchestration_config import OrchestrationConfigExpor
 from agentforge.composition.team_forger import TeamForger
 from agentforge.generation.skill_folder import SkillFolderResult
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
-    ExtractedRole,
     ExtractedSkill,
     Heuristic,
     MethodologyExtraction,
     SkillCategory,
-    SkillProficiency,
-    SuggestedTraits,
 )
 from agentforge.pipeline.forge_pipeline import ForgePipeline
-
 from tests.conftest import _make_sample_extraction
 
 

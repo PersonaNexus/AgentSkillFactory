@@ -9,7 +9,6 @@ from agentforge.wiki_memory import CandidateFact, Page, WikiStore, promote
 from agentforge.wiki_memory.cli import main as cli_main
 from agentforge.wiki_memory.schema import slugify
 
-
 # ── schema ────────────────────────────────────────────────────────────────────
 
 class TestSchema:

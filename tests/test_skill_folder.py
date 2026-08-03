@@ -7,9 +7,9 @@ import pytest
 from agentforge.generation.identity_generator import IdentityGenerator
 from agentforge.generation.skill_folder import SkillFolderGenerator, SkillFolderResult
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     Heuristic,
     MethodologyExtraction,
     OutputTemplate,

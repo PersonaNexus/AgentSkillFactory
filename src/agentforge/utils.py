@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 
@@ -54,12 +53,21 @@ def truncate_description(text: str, max_len: int = 200) -> str:
     return text
 
 
+def _is_within(base: Path, target: Path) -> bool:
+    """Return True if *target* is base or a descendant (path-prefix safe)."""
+    try:
+        target.relative_to(base)
+        return True
+    except ValueError:
+        return False
+
+
 def safe_output_path(output_dir: Path, filename: str) -> Path:
     """Build a safe output path, ensuring it stays within output_dir."""
     safe_name = safe_filename(filename)
     target = (output_dir / safe_name).resolve()
     output_resolved = output_dir.resolve()
-    if not str(target).startswith(str(output_resolved)):
+    if not _is_within(output_resolved, target):
         raise ValueError(f"Path traversal detected: {filename!r} escapes {output_dir}")
     return target
 
@@ -74,6 +82,6 @@ def safe_rel_path(base_dir: Path, rel_path: str) -> Path:
     clean_parts = [safe_filename(p) for p in parts]
     target = (base_dir / Path(*clean_parts)).resolve()
     base_resolved = base_dir.resolve()
-    if not str(target).startswith(str(base_resolved) + os.sep) and target != base_resolved:
+    if not _is_within(base_resolved, target):
         raise ValueError(f"Path traversal detected: {rel_path!r} escapes {base_dir}")
     return target

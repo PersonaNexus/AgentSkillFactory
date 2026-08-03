@@ -27,15 +27,53 @@ jobs:
         run: uv sync --dev
 
       - name: Run core test suite
-        run: uv run pytest -q
+        run: uv run pytest -q --cov=agentforge --cov-report=term-missing --cov-fail-under=55
 
-      - name: Run calibrated Ruff gate
-        run: uv run ruff check src/agentforge/web/__init__.py tests/test_cli_stability.py
+      - name: Ruff — critical errors across package
+        # E501 deferred; full style rule expansion tracked separately.
+        run: uv run ruff check src/agentforge tests --select E,F --ignore E501
 
-      - name: Run calibrated mypy gate
+      - name: Ruff — full rules on hardened modules
+        run: >-
+          uv run ruff check
+          src/agentforge/utils.py
+          src/agentforge/cli_quality.py
+          src/agentforge/web/auth.py
+          src/agentforge/wiki_memory/typer_cli.py
+          tests/test_cli_quality.py
+          tests/test_cli_stability.py
+          tests/test_utils.py
+
+      - name: Run mypy on core modules
         run: >-
           uv run mypy --follow-imports=skip --ignore-missing-imports
-          src/agentforge/utils.py src/agentforge/pipeline/forge_pipeline.py
+          src/agentforge/utils.py
+          src/agentforge/pipeline/forge_pipeline.py
+          src/agentforge/cli_quality.py
+          src/agentforge/web/auth.py
 
       - name: Build package
         run: uv run --with build python -m build
+
+  web:
+    name: Web extras quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install with web extras
+        run: uv sync --dev --extra web
+
+      - name: Run web-marked tests
+        run: uv run pytest -q -m web

@@ -6,7 +6,7 @@ import json
 import re
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Path, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 router = APIRouter(tags=["history"])
 

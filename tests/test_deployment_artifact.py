@@ -48,13 +48,10 @@ from __future__ import annotations
 import json
 import re
 
-import pytest
 import yaml
-
 from personanexus.validator import IdentityValidator
 
 from agentforge.generation.openclaw_compiler import OpenClawOutput
-
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -138,7 +135,7 @@ class TestPersonaNexusSchemaCompliance:
         validator = IdentityValidator()
         result = validator.validate_dict(data)
         assert result.valid, \
-            f"PersonaNexus validation failed:\n" + "\n".join(result.errors)
+            "PersonaNexus validation failed:\n" + "\n".join(result.errors)
 
     def test_identity_yaml_has_correct_schema_version(
         self, compiled_identity  # type: ignore[override]
@@ -403,7 +400,7 @@ class TestReferenceFixtureRoundTrip:
         validator = IdentityValidator()
         result = validator.validate_file(fixture_path)
         assert result.valid, \
-            (f"Reference fixture failed PersonaNexus validation:\n"
+            ("Reference fixture failed PersonaNexus validation:\n"
              + "\n".join(result.errors))
 
     def test_reference_fixture_schema_version(self, fixtures_dir) -> None:

@@ -6,9 +6,9 @@ import pytest
 
 from agentforge.analysis.skill_reviewer import SkillGap, SkillReviewer
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     Heuristic,
     MethodologyExtraction,
     OutputTemplate,

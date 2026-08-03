@@ -2,17 +2,13 @@
 
 from __future__ import annotations
 
-import pytest
-
 from agentforge.analysis.gap_analyzer import GapAnalyzer
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SkillCategory,
     SkillImportance,
-    SkillProficiency,
-    SuggestedTraits,
 )
 
 

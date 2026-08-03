@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from agentforge.ingestion.text import _detect_sections, _extract_title, ingest_file, ingest_text

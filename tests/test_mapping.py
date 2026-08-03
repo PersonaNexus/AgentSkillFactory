@@ -2,14 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
-from agentforge.mapping.trait_mapper import (
-    DOMAIN_TRAIT_PROFILES,
-    TraitMapper,
-    _clamp,
-    _match_domain,
-)
 from agentforge.mapping.role_mapper import (
     RoleMapper,
     _generate_agent_id,
@@ -17,10 +9,16 @@ from agentforge.mapping.role_mapper import (
     _seniority_to_register,
     _skill_to_category,
 )
+from agentforge.mapping.trait_mapper import (
+    DOMAIN_TRAIT_PROFILES,
+    TraitMapper,
+    _clamp,
+    _match_domain,
+)
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedRole,
     ExtractedSkill,
+    ExtractionResult,
     SeniorityLevel,
     SkillCategory,
     SkillImportance,

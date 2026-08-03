@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from agentforge.models.job_description import JDSection, JDSource, JobDescription
@@ -10,11 +9,6 @@ from agentforge.models.job_description import JDSection, JDSource, JobDescriptio
 
 def _detect_sections(text: str) -> list[JDSection]:
     """Detect sections in text by common heading patterns."""
-    section_pattern = re.compile(
-        r"^(?:#{1,3}\s+|[A-Z][A-Za-z\s/&]+:\s*$|[A-Z][A-Za-z\s/&]+\n[-=]+)",
-        re.MULTILINE,
-    )
-
     # Common JD section headings
     heading_keywords = [
         "responsibilities", "duties", "requirements", "qualifications",

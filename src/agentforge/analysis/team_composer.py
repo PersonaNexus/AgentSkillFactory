@@ -10,10 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from agentforge.models.extracted_skills import (
-    ExtractionResult,
     ExtractedSkill,
+    ExtractionResult,
     SkillCategory,
-    SkillProficiency,
 )
 
 
