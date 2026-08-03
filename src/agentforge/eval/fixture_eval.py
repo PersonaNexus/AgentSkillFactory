@@ -205,7 +205,8 @@ def load_expected_digest(path: Path) -> dict[str, Any] | None:
     """Load expected digest JSON if the file exists; else None."""
     if not path.is_file():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else None
 
 
 def evaluate_extraction(
@@ -319,7 +320,7 @@ def evaluate_extraction(
     fm_name_ok = False
     if skill_md.lstrip().startswith("---"):
         try:
-            import yaml  # type: ignore[import-untyped]
+            import yaml
 
             parts = skill_md.split("---", 2)
             if len(parts) >= 3:
