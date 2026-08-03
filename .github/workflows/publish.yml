@@ -1,25 +1,29 @@
 name: Publish to PyPI
 
+# Build always runs. Upload runs on release (or workflow_dispatch with dry_run=false).
+# Upload requires either:
+#   - Trusted publishing (OIDC) for this repo + environment "pypi", or
+#   - Repository secret PYPI_TOKEN
+# See CONTRIBUTING.md → Publishing to PyPI.
+
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Build only (do not upload)"
+        description: "Build only (do not upload to PyPI)"
         type: boolean
         default: true
 
 permissions:
   contents: read
-  # Trusted publishing (OIDC) — configure this project on pypi.org
   id-token: write
 
 jobs:
-  publish:
-    name: Build and publish
+  build:
+    name: Build distributions
     runs-on: ubuntu-latest
-    environment: pypi
     steps:
       - name: Check out repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -34,12 +38,67 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Build distributions
+      - name: Build wheel and sdist
         run: uv build
 
-      - name: Upload to PyPI
-        if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
-        run: uv publish
-        # Requires PyPI project "agentforge" trusted publisher for this repo.
-        # Fallback: set repository secret PYPI_TOKEN and use:
-        #   UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish:
+    name: Upload to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    if: ${{ github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false) }}
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+
+      - name: Publish to PyPI
+        env:
+          # Prefer token if present; otherwise uv uses OIDC trusted publishing.
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -n "${UV_PUBLISH_TOKEN:-}" ]; then
+            echo "Publishing with PYPI_TOKEN secret..."
+            uv publish --token "$UV_PUBLISH_TOKEN"
+            exit 0
+          fi
+
+          echo "No PYPI_TOKEN secret — attempting trusted publishing (OIDC)..."
+          if uv publish; then
+            exit 0
+          fi
+
+          cat <<'EOF'
+          ::error::PyPI upload failed — publishing credentials are not configured.
+
+          The package *build* job succeeded. Only the upload step needs setup.
+
+          Option A — Trusted publishing (recommended)
+            1. GitHub → Settings → Environments → create environment named: pypi
+            2. https://pypi.org → project "agentforge" → Publishing → Add trusted publisher
+               - Owner: PersonaNexus
+               - Repository: agentforge
+               - Workflow name: publish.yml
+               - Environment name: pypi
+            3. Re-run this workflow (or re-publish the GitHub Release)
+
+          Option B — API token
+            1. Create a PyPI API token for project agentforge
+            2. GitHub → Settings → Secrets → Actions → add PYPI_TOKEN
+            3. Re-run this workflow
+
+          Docs: CONTRIBUTING.md
+          EOF
+          exit 1

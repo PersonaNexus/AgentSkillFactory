@@ -81,14 +81,42 @@ See [SECURITY.md](SECURITY.md). Non-loopback `serve` requires `AGENTFORGE_API_TO
 
 ## Publishing to PyPI
 
-Releases are cut with GitHub Releases (`vX.Y.Z`). The `publish.yml` workflow builds
-with `uv build` and uploads via **Trusted Publishing** (OIDC).
+Releases use GitHub Releases (`vX.Y.Z`). Workflow: `.github/workflows/publish.yml`.
 
-One-time setup on [pypi.org](https://pypi.org):
+| Job | When | Required check? |
+|-----|------|-----------------|
+| **Build distributions** | Always on release / dispatch | Verifies wheel/sdist build |
+| **Upload to PyPI** | Release (or dispatch with `dry_run=false`) | Needs one-time credential setup |
 
-1. Create/claim the `agentforge` project.
-2. Add a trusted publisher: GitHub org/repo `PersonaNexus/agentforge`,
-   workflow `publish.yml`, environment `pypi`.
-3. Publish a GitHub Release — CI uploads wheels/sdist.
+### One-time credential setup (pick one)
 
-Dry-run: Actions → Publish to PyPI → Run workflow with `dry_run=true`.
+**A) Trusted publishing (recommended)**
+
+1. GitHub → **Settings → Environments** → create environment named `pypi`.
+2. On [pypi.org](https://pypi.org) → project **agentforge** → **Publishing** → Add trusted publisher:
+   - Owner: `PersonaNexus`
+   - Repository: `agentforge`
+   - Workflow name: `publish.yml`
+   - Environment name: `pypi`
+3. Re-run the failed publish workflow or publish a new release.
+
+**B) API token**
+
+1. Create a PyPI API token with upload rights for `agentforge`.
+2. GitHub → **Settings → Secrets and variables → Actions** → `PYPI_TOKEN`.
+3. Re-run the publish workflow.
+
+### Dry-run build only
+
+Actions → **Publish to PyPI** → Run workflow → leave `dry_run=true` (default).
+
+### Until PyPI is configured
+
+Install from GitHub tags:
+
+```bash
+pip install git+https://github.com/PersonaNexus/agentforge.git@v0.2.1
+```
+
+**Note:** A red **Publish to PyPI** run after a release means credentials are missing,
+not that product CI failed. The **CI** workflow (core + web) is the quality gate.
