@@ -1,6 +1,8 @@
 [project]
-name = "agentforge"
-version = "0.2.1"
+# PyPI distribution name (import package remains `agentforge`; CLI remains `agentforge`).
+# The bare name "agentforge" is taken by an unrelated project on PyPI.
+name = "personanexus-agentforge"
+version = "0.2.2"
 description = "Transform job descriptions into deployable AI agent blueprints via PersonaNexus"
 readme = "README.md"
 license = { text = "MIT" }
@@ -71,7 +73,7 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--cov=agentforge --cov-report=term-missing"
 markers = [
-    "web: tests that require the optional agentforge[web] dependency group",
+    "web: tests that require the optional personanexus-agentforge[web] extras",
 ]
 
 [tool.ruff]

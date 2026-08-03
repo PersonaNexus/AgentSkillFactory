@@ -87,7 +87,8 @@ jobs:
 
           Option A — Trusted publishing (recommended)
             1. GitHub → Settings → Environments → create environment named: pypi
-            2. https://pypi.org → project "agentforge" → Publishing → Add trusted publisher
+            2. https://pypi.org → project "personanexus-agentforge" → Publishing
+               (create the project on first upload if needed)
                - Owner: PersonaNexus
                - Repository: agentforge
                - Workflow name: publish.yml
@@ -95,9 +96,12 @@ jobs:
             3. Re-run this workflow (or re-publish the GitHub Release)
 
           Option B — API token
-            1. Create a PyPI API token for project agentforge
+            1. Create a PyPI API token for project personanexus-agentforge
             2. GitHub → Settings → Secrets → Actions → add PYPI_TOKEN
             3. Re-run this workflow
+
+          Note: PyPI name is personanexus-agentforge (not bare agentforge —
+          that name is taken by an unrelated package). CLI/import stay agentforge.
 
           Docs: CONTRIBUTING.md
           EOF

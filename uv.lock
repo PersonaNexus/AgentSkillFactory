@@ -3,78 +3,6 @@ revision = 3
 requires-python = ">=3.12"
 
 [[package]]
-name = "agentforge"
-version = "0.2.1"
-source = { editable = "." }
-dependencies = [
-    { name = "anthropic" },
-    { name = "openai" },
-    { name = "personanexus" },
-    { name = "pydantic" },
-    { name = "pymupdf" },
-    { name = "python-docx" },
-    { name = "pyyaml" },
-    { name = "rich" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-langgraph = [
-    { name = "langchain-anthropic" },
-    { name = "langchain-core" },
-    { name = "langgraph" },
-]
-mcp = [
-    { name = "mcp" },
-]
-web = [
-    { name = "alembic" },
-    { name = "fastapi" },
-    { name = "python-multipart" },
-    { name = "sqlalchemy" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "alembic", marker = "extra == 'web'", specifier = ">=1.13,<2.0" },
-    { name = "anthropic", specifier = ">=0.40,<1.0" },
-    { name = "fastapi", marker = "extra == 'web'", specifier = ">=0.115,<1.0" },
-    { name = "langchain-anthropic", marker = "extra == 'langgraph'", specifier = ">=0.3,<1.0" },
-    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=0.3,<1.0" },
-    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2,<1.0" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0,<2.0" },
-    { name = "openai", specifier = ">=2.0,<3.0" },
-    { name = "personanexus", specifier = ">=1.4,<2.0" },
-    { name = "pydantic", specifier = ">=2.0,<3.0" },
-    { name = "pymupdf", specifier = ">=1.24,<2.0" },
-    { name = "python-docx", specifier = ">=1.0,<2.0" },
-    { name = "python-multipart", marker = "extra == 'web'", specifier = ">=0.0.9" },
-    { name = "pyyaml", specifier = ">=6.0.1,<7.0" },
-    { name = "rich", specifier = ">=13.0,<14.0" },
-    { name = "sqlalchemy", marker = "extra == 'web'", specifier = ">=2.0,<3.0" },
-    { name = "typer", specifier = ">=0.9,<1.0" },
-    { name = "uvicorn", extras = ["standard"], marker = "extra == 'web'", specifier = ">=0.30,<1.0" },
-]
-provides-extras = ["web", "mcp", "langgraph"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.8" },
-    { name = "pytest", specifier = ">=8.0" },
-    { name = "pytest-cov", specifier = ">=4.0" },
-    { name = "ruff", specifier = ">=0.4" },
-]
-
-[[package]]
 name = "alembic"
 version = "1.18.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1454,6 +1382,78 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ba/58/2a05fe67d1f89567b6ccd8c7717a8a63b69c97ca27428c6ab56d51a4d4ed/personanexus-1.4.1.tar.gz", hash = "sha256:2446dd4d40e3868640b48560de22377cc5e365d04109361798206f1e93df21ee", size = 442687, upload-time = "2026-02-28T23:10:44.583Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/13/6db3d3089cb3d1b04231a0bdf97860a9ce3578110f8c58c1a873ef51d524/personanexus-1.4.1-py3-none-any.whl", hash = "sha256:67d66be73a80e73a16d81fb2c7fd9144464ed19954e704f60801ccca3ce92350", size = 85192, upload-time = "2026-02-28T23:10:43.279Z" },
+]
+
+[[package]]
+name = "personanexus-agentforge"
+version = "0.2.2"
+source = { editable = "." }
+dependencies = [
+    { name = "anthropic" },
+    { name = "openai" },
+    { name = "personanexus" },
+    { name = "pydantic" },
+    { name = "pymupdf" },
+    { name = "python-docx" },
+    { name = "pyyaml" },
+    { name = "rich" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+langgraph = [
+    { name = "langchain-anthropic" },
+    { name = "langchain-core" },
+    { name = "langgraph" },
+]
+mcp = [
+    { name = "mcp" },
+]
+web = [
+    { name = "alembic" },
+    { name = "fastapi" },
+    { name = "python-multipart" },
+    { name = "sqlalchemy" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "alembic", marker = "extra == 'web'", specifier = ">=1.13,<2.0" },
+    { name = "anthropic", specifier = ">=0.40,<1.0" },
+    { name = "fastapi", marker = "extra == 'web'", specifier = ">=0.115,<1.0" },
+    { name = "langchain-anthropic", marker = "extra == 'langgraph'", specifier = ">=0.3,<1.0" },
+    { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=0.3,<1.0" },
+    { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=0.2,<1.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.0,<2.0" },
+    { name = "openai", specifier = ">=2.0,<3.0" },
+    { name = "personanexus", specifier = ">=1.4,<2.0" },
+    { name = "pydantic", specifier = ">=2.0,<3.0" },
+    { name = "pymupdf", specifier = ">=1.24,<2.0" },
+    { name = "python-docx", specifier = ">=1.0,<2.0" },
+    { name = "python-multipart", marker = "extra == 'web'", specifier = ">=0.0.9" },
+    { name = "pyyaml", specifier = ">=6.0.1,<7.0" },
+    { name = "rich", specifier = ">=13.0,<14.0" },
+    { name = "sqlalchemy", marker = "extra == 'web'", specifier = ">=2.0,<3.0" },
+    { name = "typer", specifier = ">=0.9,<1.0" },
+    { name = "uvicorn", extras = ["standard"], marker = "extra == 'web'", specifier = ">=0.30,<1.0" },
+]
+provides-extras = ["web", "mcp", "langgraph"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.8" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-cov", specifier = ">=4.0" },
+    { name = "ruff", specifier = ">=0.4" },
 ]
 
 [[package]]

@@ -57,7 +57,7 @@ class LangGraphExporter:
             f"Usage:\n"
             f"    python {_to_python_id(team.role_title)}_graph.py\n"
             f"\n"
-            f'Requires: pip install "agentforge[langgraph]"\n'
+            f'Requires: pip install "personanexus-agentforge[langgraph]"\n'
             f'"""\n'
         )
 

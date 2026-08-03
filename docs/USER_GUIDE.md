@@ -9,8 +9,8 @@
 ### Install & Run
 
 ```bash
-# Install
-pip install agentforge
+# Install (PyPI name; CLI/import remain agentforge)
+pip install personanexus-agentforge
 
 # Interactive setup (sets API key, default model)
 agentforge init
@@ -429,7 +429,7 @@ This generates `agent_graph.py` — a self-contained Python module containing:
 
 ```bash
 # Install LangGraph deps
-pip install "agentforge[langgraph]"
+pip install "personanexus-agentforge[langgraph]"
 
 # Run directly
 python team-output/agent_graph.py "Design a new ETL pipeline"
