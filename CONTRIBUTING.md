@@ -93,16 +93,18 @@ Releases use GitHub Releases (`vX.Y.Z`). Workflow: `.github/workflows/publish.ym
 **A) Trusted publishing (recommended)**
 
 1. GitHub → **Settings → Environments** → create environment named `pypi`.
-2. On [pypi.org](https://pypi.org) → project **agentforge** → **Publishing** → Add trusted publisher:
+2. On [pypi.org](https://pypi.org) create/claim project **`personanexus-agentforge`**
+   (not bare `agentforge` — that name is an unrelated package).
+3. **Publishing** → Add trusted publisher:
    - Owner: `PersonaNexus`
    - Repository: `agentforge`
    - Workflow name: `publish.yml`
    - Environment name: `pypi`
-3. Re-run the failed publish workflow or publish a new release.
+4. Publish a GitHub Release (or re-run the publish workflow).
 
 **B) API token**
 
-1. Create a PyPI API token with upload rights for `agentforge`.
+1. Create a PyPI API token with upload rights for **`personanexus-agentforge`**.
 2. GitHub → **Settings → Secrets and variables → Actions** → `PYPI_TOKEN`.
 3. Re-run the publish workflow.
 
@@ -110,13 +112,21 @@ Releases use GitHub Releases (`vX.Y.Z`). Workflow: `.github/workflows/publish.ym
 
 Actions → **Publish to PyPI** → Run workflow → leave `dry_run=true` (default).
 
-### Until PyPI is configured
-
-Install from GitHub tags:
+### Install once published
 
 ```bash
-pip install git+https://github.com/PersonaNexus/agentforge.git@v0.2.1
+pip install personanexus-agentforge
+# CLI and import stay the same:
+agentforge --help
+python -c "import agentforge; print(agentforge.__version__)"
 ```
 
-**Note:** A red **Publish to PyPI** run after a release means credentials are missing,
-not that product CI failed. The **CI** workflow (core + web) is the quality gate.
+From GitHub tags (without PyPI):
+
+```bash
+pip install git+https://github.com/PersonaNexus/agentforge.git@v0.2.2
+```
+
+**Note:** A red **Publish to PyPI** run after a release means credentials/project setup
+are incomplete, not that product CI failed. The **CI** workflow (core + web) is the
+quality gate.

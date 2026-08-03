@@ -1204,7 +1204,7 @@ def team(
         graph_path.write_text(langgraph_py)
         console.print(f"[green]LangGraph module:[/green] {graph_path}")
         console.print(
-            '  [dim]Install deps: pip install "agentforge[langgraph]"[/dim]\n'
+            '  [dim]Install deps: pip install "personanexus-agentforge[langgraph]"[/dim]\n'
             f"  [dim]Run: python {graph_path} \"your task here\"[/dim]"
         )
 

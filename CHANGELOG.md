@@ -15,6 +15,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   regen via `scripts/regenerate_eval_digests.py`.
 - `docs/GOAL-0.3.md` — hero-path milestone tracking.
 
+## [0.2.2] — 2026-08-03
+
+### Changed
+
+- **PyPI distribution name** is now **`personanexus-agentforge`** (the bare name
+  `agentforge` is already used by an unrelated project on PyPI).
+- **CLI and import are unchanged:** `agentforge` / `import agentforge`.
+- Install docs and publish instructions updated for the new name.
+
+```bash
+pip install personanexus-agentforge
+pip install "personanexus-agentforge[web]"
+```
+
 ## [0.2.1] — 2026-08-03
 
 ### Added

@@ -20,9 +20,12 @@ Think of PersonaNexus as the schema, AgentForge as the factory, and Voice Packs 
 
 ## Install
 
+PyPI distribution name is **`personanexus-agentforge`** (the bare name `agentforge` is
+an unrelated project). The **CLI and import stay `agentforge`**.
+
 ```bash
-pip install agentforge            # core CLI (PyPI when published)
-pip install "agentforge[web]"     # adds REST API + web UI
+pip install personanexus-agentforge            # core CLI
+pip install "personanexus-agentforge[web]"     # adds REST API + web UI
 ```
 
 Or from source:
@@ -42,12 +45,12 @@ export OPENAI_API_KEY=sk-...
 ```
 
 
-## Hero path (0.2.0)
+## Hero path
 
 The shortest path from a job description to a deployable, checked skill:
 
 ```bash
-pip install "agentforge[web]"   # or: uv sync --extra web
+pip install "personanexus-agentforge[web]"   # or: uv sync --extra web
 export ANTHROPIC_API_KEY=sk-ant-...   # or OPENAI_API_KEY
 
 agentforge forge job_posting.txt -d ./out --skill-folder --check --check-strict
@@ -238,7 +241,7 @@ agentforge team job_posting.txt -d ./team-output --format langgraph
 agentforge team job_posting.txt --format both
 ```
 
-Produces `agent_graph.py` — a self-contained Python module with typed state, agent nodes, conductor routing, and a compiled graph. Requires `pip install "agentforge[langgraph]"`.
+Produces `agent_graph.py` — a self-contained Python module with typed state, agent nodes, conductor routing, and a compiled graph. Requires `pip install "personanexus-agentforge[langgraph]"`.
 
 ## Skill testing
 
