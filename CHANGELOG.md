@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `CONTRIBUTING.md` and USER_GUIDE updates for check, telemetry, and wiki CLI.
 - **Local telemetry** (`AGENTFORGE_TELEMETRY_MODE=local`): pipeline stage timings to
   JSONL under `~/.agentforge/telemetry/` (default off; no JD/skill content; no remote).
 - `agentforge check` — one-shot lint + prompt-size + guardrail audit gate

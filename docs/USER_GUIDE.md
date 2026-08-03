@@ -180,6 +180,9 @@ agentforge culture to-mixin profile.yaml
 agentforge culture list
 
 # Quality & safety tools
+agentforge check output/SKILL.md                             # One-shot lint + size + audit
+agentforge check output/SKILL.md --strict --format json      # CI-hard gate
+agentforge identity validate identity.yaml                   # PersonaNexus schema only
 agentforge prompt-size output/SKILL.md                       # Size analysis & bloat detection
 agentforge lint output/SKILL.md                              # Structural + semantic linting
 agentforge audit output/SKILL.md --domain finance            # Safety guardrail audit
@@ -192,7 +195,16 @@ agentforge prompt-diff old.md new.md                         # Section-by-sectio
 
 ## Quality & Safety Tools
 
-Five commands for validating generated skills — all support `--format json` and return exit code 1 on failure (CI-friendly).
+Quality commands support `--format json` and return exit code 1 on failure (CI-friendly).
+
+### Unified check (`check`)
+
+Runs lint + prompt-size + guardrail audit in one pass. Default fails on lint errors or bloat; `--strict` also fails incomplete audits.
+
+```bash
+agentforge check output/SKILL.md
+agentforge check output/SKILL.md --domain "data engineering" --strict
+```
 
 ### Prompt Size (`prompt-size`)
 
@@ -271,6 +283,20 @@ List the specific tools, templates, and processes:
 
 **Without these**: the pipeline infers methodology from the JD alone — producing generic workflows.
 **With these**: you get expert decision-making rules, concrete output templates, and domain-specific heuristics.
+
+---
+
+## Telemetry (optional)
+
+Pipeline stage timings are **off by default**. For local JSONL only:
+
+```bash
+export AGENTFORGE_TELEMETRY_MODE=local
+agentforge forge job.txt
+# → ~/.agentforge/telemetry/events-YYYY-MM-DD.jsonl
+```
+
+No JD text, skill bodies, or network export. See [telemetry-design.md](telemetry-design.md).
 
 ---
 
