@@ -11,7 +11,12 @@ collect_ignore: list[str] = []
 if importlib.util.find_spec("sqlalchemy") is None:
     collect_ignore.append("test_db.py")
 if importlib.util.find_spec("fastapi") is None:
-    collect_ignore.append("test_forge_routes.py")
+    collect_ignore.extend(
+        [
+            "test_forge_routes.py",
+            "test_web_quality_check.py",
+        ]
+    )
 
 from agentforge.models.extracted_skills import (
     ExtractedRole,
