@@ -1,0 +1,82 @@
+{
+  "role": {
+    "title": "Platform SRE",
+    "purpose": "Keep platform reliability high",
+    "scope_primary": [
+      "Incident response",
+      "SLO management",
+      "CI reliability"
+    ],
+    "scope_secondary": [
+      "Capacity planning"
+    ],
+    "audience": [
+      "Engineers",
+      "On-call"
+    ],
+    "seniority": "senior",
+    "domain": "Platform Engineering"
+  },
+  "skills": [
+    {
+      "name": "Kubernetes",
+      "category": "tool",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "Orchestration",
+      "examples": [],
+      "genai_application": ""
+    },
+    {
+      "name": "Observability",
+      "category": "hard",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "Metrics and traces",
+      "examples": [],
+      "genai_application": ""
+    },
+    {
+      "name": "Incident Response",
+      "category": "hard",
+      "proficiency": "expert",
+      "importance": "required",
+      "context": "On-call",
+      "examples": [],
+      "genai_application": ""
+    },
+    {
+      "name": "Communication",
+      "category": "soft",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "Stakeholder updates",
+      "examples": [],
+      "genai_application": ""
+    }
+  ],
+  "responsibilities": [
+    "Run incident response",
+    "Own SLOs",
+    "Improve CI reliability"
+  ],
+  "qualifications": [
+    "5+ years ops"
+  ],
+  "suggested_traits": {
+    "warmth": null,
+    "verbosity": null,
+    "assertiveness": null,
+    "humor": null,
+    "empathy": null,
+    "directness": 0.8,
+    "rigor": 0.9,
+    "creativity": 0.4,
+    "epistemic_humility": null,
+    "patience": 0.5
+  },
+  "automation_potential": 0.45,
+  "automation_rationale": "Many playbooks are automatable",
+  "salary_min": null,
+  "salary_max": null
+}

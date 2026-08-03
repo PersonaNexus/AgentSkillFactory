@@ -2,7 +2,7 @@
 
 > **Repo/Product map:** AgentForge is the product, Python package, and CLI (`agentforge`). The public GitHub repository is [`PersonaNexus/agentforge`](https://github.com/PersonaNexus/agentforge). It was formerly named `AgentSkillFactory`; GitHub redirects old links. See [docs/repo-product-map.md](docs/repo-product-map.md) for the ecosystem map and naming policy.
 
-Transform job descriptions, role descriptions, and operating context into deployable AI agent blueprints via [PersonaNexus](https://github.com/PersonaNexus/personanexus) — and keep them healthy after they ship.
+**v0.2.0** — Transform job descriptions, role descriptions, and operating context into deployable AI agent blueprints via [PersonaNexus](https://github.com/PersonaNexus/personanexus) — and keep them healthy after they ship.
 
 AgentForge reads a job description (txt, md, pdf, docx), extracts skills and role metadata with an LLM, maps them to [PersonaNexus](https://github.com/PersonaNexus/personanexus) personality traits, and outputs a ready-to-use agent identity — including Claude Code skill folders you can drop straight into `.claude/skills/`.
 
@@ -40,6 +40,28 @@ export ANTHROPIC_API_KEY=sk-ant-...
 # or
 export OPENAI_API_KEY=sk-...
 ```
+
+
+## Hero path (0.2.0)
+
+The shortest path from a job description to a deployable, checked skill:
+
+```bash
+pip install "agentforge[web]"   # or: uv sync --extra web
+export ANTHROPIC_API_KEY=sk-ant-...   # or OPENAI_API_KEY
+
+agentforge forge job_posting.txt -d ./out --skill-folder
+agentforge check ./out/*/SKILL.md --domain "your domain" --strict
+agentforge identity validate ./out/*.yaml
+
+# Optional day-2 once the agent is live:
+agentforge drill ingest ./out/<skill-folder>
+agentforge drill scan ./out/<skill-folder>
+agentforge drill propose ./out/<skill-folder>
+```
+
+Copy the skill folder into `.claude/skills/` (or your OpenClaw/PersonaNexus deploy path).
+See [examples/senior-data-engineer](examples/senior-data-engineer/README.md) for a sanitized golden package.
 
 ## Quick start
 
@@ -249,6 +271,7 @@ agentforge drill ingest <skill-dir>     # snapshot a skill directory
 agentforge drill scan <skill-dir>       # deterministic diagnostics
 agentforge drill watch <skill-dir>      # diff snapshots
 agentforge drill version <skill-dir>    # inventory evolution log
+agentforge drill propose <skill-dir>   # deterministic maintenance plan from scan
 ```
 
 `drill scan` flags four classes of issue: **missing_file** (folder lacks SKILL.md), **broken_reference** (body cites a path that's not on disk), **bloat** (body word count above threshold), **overlap** (Jaccard similarity between two skill descriptions above threshold), **tool_sprawl** (`allowed-tools` count above threshold or stale entries not mentioned in body). Thresholds are configurable per-run.
@@ -273,6 +296,7 @@ Aggregate statistics over a JD corpus + agent ↔ market gap analysis.
 ```bash
 agentforge market trends <jd-folder>                                   # top skills, breakdowns, recency split
 agentforge market gap <jd-folder> --skill-dir <agent-skills>           # coverage score + market_only / agent_only / shared
+agentforge market propose <jd-folder> --skill-dir <agent-skills>       # deterministic coverage proposals from gap
 ```
 
 `trends` surfaces top skills by frequency and role-share, breakdowns by category / domain / seniority, and a rising-vs-falling skills split when JDs carry `date:` frontmatter. `gap` compares an agent's drill SkillInventory to the corpus's clustered SkillLandscape and emits a coverage score over load-bearing market skills.
@@ -286,69 +310,95 @@ All four products ride on `agentforge.day2/` — a thin shared package for git-s
 Analyze, lint, and validate generated skills:
 
 ```bash
-# Check prompt size and detect bloat
+# Recommended: one-shot gate (lint + size + audit)
+agentforge check output/SKILL.md
+agentforge check .claude/skills/my-agent --identity identity.yaml
+agentforge check output/SKILL.md --strict --format json   # CI-hard (fails incomplete audits)
+
+# Individual tools
 agentforge prompt-size output/SKILL.md
-
-# Lint for structural/semantic issues (missing sections, trait contradictions)
 agentforge lint output/SKILL.md
-
-# Audit safety guardrails (with auto-fix for missing ones)
 agentforge audit output/SKILL.md --domain "data engineering"
 agentforge audit output/SKILL.md --fix --output fixed_SKILL.md
-
-# Estimate monthly token costs
 agentforge cost output/SKILL.md --daily-calls 100
-
-# Compare two versions of a skill
 agentforge prompt-diff v1/SKILL.md v2/SKILL.md
+
+# Validate PersonaNexus identity YAML only
+agentforge identity validate identity.yaml
 ```
 
 All quality commands support `--format json` for CI integration and return exit code 1 on failure.
 
+Programmatic gate:
+
+```python
+from pathlib import Path
+from agentforge.analysis.skill_check import SkillChecker, validate_identity_yaml
+
+report = SkillChecker(domain="data engineering").check_paths(Path("SKILL.md"), strict=True)
+assert report.passed
+ok, msg = validate_identity_yaml(Path("identity.yaml").read_text())
+```
+
 ## Telemetry & observability
 
-Telemetry is design-only right now. Collection defaults to off and includes a no-default-exfiltration guarantee.
+**Default: off.** No metrics files, no network.
 
-- [Telemetry design note](docs/telemetry-design.md)
+Opt into **local** JSONL stage timings (no JD/skill content, no remote export):
+
+```bash
+export AGENTFORGE_TELEMETRY_MODE=local
+# optional override:
+export AGENTFORGE_TELEMETRY_DIR=~/.agentforge/telemetry
+
+agentforge forge job_posting.txt
+# → ~/.agentforge/telemetry/events-YYYY-MM-DD.jsonl
+```
+
+Pipeline events: `pipeline_start`, per-`stage` (`ok`/`error`/`skipped` + `duration_ms`), `pipeline_end`, and `llm_usage` (token counts when the LLM client is used).
+Full design: [docs/telemetry-design.md](docs/telemetry-design.md). Security notes: [SECURITY.md](SECURITY.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, gates, and PR expectations.
 
 ## Development quality gates
 
-The default CI job intentionally exercises the core CLI path without optional web/database extras. Web/API tests are marked `web` and are skipped from collection unless `agentforge[web]` dependencies are installed.
+CI runs two jobs:
 
-Run the same gates locally with `uv`:
+| Job | What it does |
+|-----|----------------|
+| **Core** | `uv sync --dev`, full pytest with coverage floor **60%**, Ruff E/F on package, full Ruff on hardened modules, mypy on core modules, package build |
+| **Web** | `uv sync --dev --extra web`, `pytest -m web` |
+
+Run the same locally:
 
 ```bash
 uv sync --dev
-uv run pytest -q
-uv run ruff check src/agentforge/web/__init__.py tests/test_cli_stability.py
-uv run mypy --follow-imports=skip --ignore-missing-imports src/agentforge/utils.py src/agentforge/pipeline/forge_pipeline.py
+uv run pytest -q --cov=agentforge --cov-fail-under=60
+uv run ruff check src/agentforge tests --select E,F --ignore E501
+uv sync --dev --extra web && uv run pytest -q -m web
 uv run --with build python -m build
 ```
 
-Current baseline note: repo-wide Ruff and strict mypy still have pre-existing debt, so CI starts with a narrow calibrated gate plus full core tests. Expand those scopes as cleanup lands.
+Golden tests lock the public [senior-data-engineer example](examples/senior-data-engineer/README.md) (PersonaNexus identity + skill folder layout + deployment package) **without** live LLM calls.
 
 ## Wiki-memory (structured knowledge layer)
 
-Adds a durable, cross-linked knowledge layer alongside each agent's flat episodic MEMORY. Two-tier memory: episodic (MEMORY.md) + structured wiki pages.
+Durable, cross-linked knowledge alongside episodic memory. Prefer the main CLI:
 
 ```bash
-# Initialize a wiki at a directory
-python -m agentforge.wiki_memory.cli init --root ~/wiki
-
-# Add a page directly
-python -m agentforge.wiki_memory.cli add \
-  --title "AI Gateway" --type entity --kind project \
-  --alias gateway --fact "Runs on port 8900" --source session:2026-04-04
-
-# Capture a candidate fact (goes to review queue)
-python -m agentforge.wiki_memory.cli candidate \
-  --subject "AI Gateway" --claim "Uses Gemma 4 E4B" \
-  --type entity --kind project --source session:2026-04-04
-
-# Review pending candidates
-python -m agentforge.wiki_memory.cli pending
-python -m agentforge.wiki_memory.cli promote --accept-all
+agentforge wiki init --root ~/wiki
+agentforge wiki add --title "AI Gateway" --type entity --kind project \
+  --fact "Runs on port 8900" --source session:2026-04-04 --root ~/wiki
+agentforge wiki candidate --subject "AI Gateway" --claim "Uses Gemma 4 E4B" \
+  --type entity --kind project --source session:2026-04-04 --root ~/wiki
+agentforge wiki pending --root ~/wiki
+agentforge wiki list --root ~/wiki
+agentforge wiki promote --accept-all --root ~/wiki
 ```
+
+(The module entrypoint `python -m agentforge.wiki_memory.cli …` still works.)
 
 **Key features:**
 - **Capture → candidate → review → promote** funnel (no silent writes)

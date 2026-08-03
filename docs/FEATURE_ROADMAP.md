@@ -20,14 +20,18 @@ Features that extend AgentForge from a one-shot forge into a closed-loop agent d
 | `agentforge department` | Multi-agent team synthesis from JD corpus | Shipped (Phase 1) |
 | `agentforge market` | JD-corpus trends + gap analysis | Shipped (Phase 1) |
 | `agentforge wiki` | Personal wiki memory (entities, candidates, promote) | Shipped (MVP) |
+| Local telemetry | Opt-in JSONL pipeline stage timings + llm_usage | Shipped |
+| `drill propose` / `market propose` | Deterministic day-2 plans | Shipped |
+| Fixture eval | Offline generation gates (no live LLM) | Shipped |
+| Release 0.2.0 | Public Alpha hardening tag | Shipped |
 | Web UI + REST + MCP | Optional extras | Shipped |
 
 ## Next (prioritized)
 
-1. **Honest quality gates** — expand full Ruff rule set beyond E/F; raise coverage floor; schema golden checks for forge outputs without live LLM.
+1. **Honest quality gates** — expand full Ruff rule set beyond E/F; keep raising coverage floor.
 2. **Day-2 propose surfaces** — `drill propose` / `market propose` (LLM only on proposal phase).
-3. **Telemetry (opt-in local)** — stage timing and token cost counters; see `docs/telemetry-design.md`.
-4. **Eval harness** — fixture-based regression for skill/identity schema stability against PersonaNexus.
+3. **Telemetry** — token/cost counters from LLM responses; optional CLI flag; remote export remains design-only.
+4. **Eval harness** — broader fixture regression beyond the senior-data-engineer golden package.
 
 ## Design notes
 

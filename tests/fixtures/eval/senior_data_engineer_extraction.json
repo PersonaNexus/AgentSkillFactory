@@ -1,0 +1,106 @@
+{
+  "role": {
+    "title": "Senior Data Engineer",
+    "purpose": "Design, build, and maintain scalable data infrastructure",
+    "scope_primary": [
+      "ETL pipeline design",
+      "Data warehouse architecture",
+      "Data quality"
+    ],
+    "scope_secondary": [
+      "ML model operationalization",
+      "Mentoring"
+    ],
+    "audience": [
+      "Data scientists",
+      "Analysts",
+      "Product teams"
+    ],
+    "seniority": "senior",
+    "domain": "Data Engineering"
+  },
+  "skills": [
+    {
+      "name": "Python",
+      "category": "hard",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "Primary programming language for data pipelines",
+      "examples": [
+        "pandas for data manipulation",
+        "PySpark for distributed processing"
+      ],
+      "genai_application": "ML-powered code generation and automated testing"
+    },
+    {
+      "name": "SQL",
+      "category": "hard",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "Data warehouse querying and modeling",
+      "examples": [
+        "PostgreSQL",
+        "BigQuery",
+        "dbt for transformations"
+      ],
+      "genai_application": ""
+    },
+    {
+      "name": "Apache Spark",
+      "category": "tool",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "Large-scale data processing",
+      "examples": [
+        "Spark SQL",
+        "Spark Streaming",
+        "Delta Lake"
+      ],
+      "genai_application": "Auto-tuning Spark jobs via ML optimization"
+    },
+    {
+      "name": "Data Architecture",
+      "category": "domain",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "End-to-end data platform design and governance",
+      "examples": [],
+      "genai_application": "AI-assisted schema evolution and data lineage tracking"
+    },
+    {
+      "name": "Team Collaboration",
+      "category": "soft",
+      "proficiency": "advanced",
+      "importance": "required",
+      "context": "Cross-functional work with data scientists and analysts",
+      "examples": [],
+      "genai_application": ""
+    }
+  ],
+  "responsibilities": [
+    "Design and implement scalable ETL/ELT pipelines",
+    "Build and maintain data warehouse architecture",
+    "Develop real-time streaming solutions",
+    "Establish data quality frameworks"
+  ],
+  "qualifications": [
+    "5+ years of experience in data engineering",
+    "Bachelor's degree in Computer Science"
+  ],
+  "suggested_traits": {
+    "warmth": null,
+    "verbosity": null,
+    "assertiveness": null,
+    "humor": null,
+    "empathy": null,
+    "directness": 0.7,
+    "rigor": 0.85,
+    "creativity": 0.5,
+    "epistemic_humility": null,
+    "patience": 0.6
+  },
+  "automation_potential": 0.35,
+  "automation_rationale": "Data pipeline design requires significant architectural judgment",
+  "salary_min": null,
+  "salary_max": null
+}

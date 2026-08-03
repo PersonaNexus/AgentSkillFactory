@@ -202,5 +202,81 @@ def cmd_gap(
     console.print(f"  gap json: [bold]{json_path}[/bold]")
 
 
+@app.command("propose")
+def cmd_propose(
+    jd_folder: Path = typer.Argument(
+        ...,
+        help="Directory of JD markdown files (the market).",
+    ),
+    skill_dir: Path = typer.Option(
+        ...,
+        "--skill-dir", "-s",
+        help="Agent skill directory to compare against (drill-shaped).",
+    ),
+    output_dir: Path | None = typer.Option(
+        None, "--output-dir", "-o",
+        help="Where to write market-propose-*.{md,json}. Default: <skill-dir>/.drill/market/",
+    ),
+    model: str | None = typer.Option(
+        None, "--model", "-m",
+        help="LLM model for per-JD skill extraction (same as market gap).",
+    ),
+    no_cache: bool = typer.Option(
+        False, "--no-cache",
+        help="Force re-extraction (ignore cached results).",
+    ),
+    coverage_role_threshold: int = typer.Option(
+        DEFAULT_COVERAGE_ROLE_THRESHOLD, "--coverage-role-threshold",
+    ),
+    write: bool = typer.Option(
+        True, "--write/--no-write",
+        help="Persist market-propose-*.{md,json}.",
+    ),
+) -> None:
+    """Turn market gap into deterministic coverage proposals (no proposal-time LLM).
+
+    Extraction for the corpus may still call an LLM (same as ``market gap``);
+    the proposal mapping itself is rule-based.
+    """
+    from agentforge.corpus import load_corpus
+    from agentforge.department.cluster import cluster_skills
+    from agentforge.department.synthesize import _default_extractor, extract_corpus
+    from agentforge.drill.ingest import ingest as drill_ingest
+    from agentforge.llm.client import LLMClient
+    from agentforge.market import propose as propose_mod
+
+    jd_folder = validate_dir(jd_folder, entity="jd-folder")
+    skill_dir = validate_dir(skill_dir, entity="skill-dir")
+    out_dir = (output_dir or (skill_dir / ".drill" / "market")).expanduser().resolve()
+
+    client = LLMClient(model=model) if model else LLMClient()
+    corpus = load_corpus(jd_folder)
+    extractions = extract_corpus(corpus, _default_extractor(client), use_cache=not no_cache)
+    landscape = cluster_skills(extractions)
+    inventory = drill_ingest(skill_dir)
+    gap = compute_gap(
+        landscape, inventory,
+        coverage_role_threshold=coverage_role_threshold,
+        corpus_root=str(jd_folder),
+    )
+    report = propose_mod.propose_from_gap(gap)
+
+    table = Table(title="market propose", show_lines=False)
+    table.add_column("Priority", style="bold")
+    table.add_column("Action", style="cyan")
+    table.add_column("Skill")
+    for p in report.proposals[:30]:
+        color = {"high": "red", "medium": "yellow", "low": "blue"}.get(p.priority, "white")
+        table.add_row(f"[{color}]{p.priority}[/{color}]", p.action, p.skill)
+    console.print(table)
+    console.print(
+        f"[green]✓[/green] {len(report.proposals)} proposal(s) · "
+        f"coverage {report.coverage_score:.0%}"
+    )
+    if write:
+        path = propose_mod.write_proposals(report, out_dir)
+        console.print(f"  plan: [bold]{path}[/bold]")
+
+
 def register(parent: typer.Typer) -> None:
     parent.add_typer(app, name="market")
