@@ -238,5 +238,68 @@ def cmd_version(
     console.print(version_mod.render_log(entries))
 
 
+@app.command("propose")
+def cmd_propose(
+    skill_dir: Path = typer.Argument(
+        ...,
+        help="Skill folder or parent directory (same as drill scan).",
+    ),
+    bloat_threshold: int = typer.Option(
+        scan_mod.BLOAT_WORD_THRESHOLD, "--bloat-threshold",
+    ),
+    tool_threshold: int = typer.Option(
+        scan_mod.TOOL_SPRAWL_THRESHOLD, "--tool-threshold",
+    ),
+    overlap_threshold: float = typer.Option(
+        scan_mod.OVERLAP_JACCARD_THRESHOLD, "--overlap-threshold",
+    ),
+    write: bool = typer.Option(
+        True, "--write/--no-write",
+        help="Persist propose-<timestamp>.{md,json} under <skill-dir>/.drill/.",
+    ),
+) -> None:
+    """Turn scan findings into deterministic maintenance proposals (no LLM).
+
+    Does not edit skill sources — writes a reviewable plan only.
+    """
+    from agentforge.drill import propose as propose_mod
+
+    skill_dir = _validate_skill_dir(skill_dir)
+    inventory = ingest_mod.ingest(skill_dir)
+    scan_report = scan_mod.scan(
+        inventory,
+        bloat_threshold=bloat_threshold,
+        tool_threshold=tool_threshold,
+        overlap_threshold=overlap_threshold,
+    )
+    report = propose_mod.propose_from_scan(scan_report)
+
+    if not report.proposals:
+        console.print(Panel(
+            "[green]No proposals — scan found nothing actionable.[/green]",
+            title=f"drill propose — {skill_dir}",
+        ))
+    else:
+        table = Table(title=f"drill propose — {skill_dir}", show_lines=False)
+        table.add_column("Priority", style="bold")
+        table.add_column("Action", style="cyan")
+        table.add_column("Skill", style="dim")
+        table.add_column("Title")
+        for p in report.proposals:
+            color = {"high": "red", "medium": "yellow", "low": "blue"}.get(p.priority, "white")
+            table.add_row(
+                f"[{color}]{p.priority}[/{color}]",
+                p.action,
+                p.skill or "—",
+                p.title,
+            )
+        console.print(table)
+
+    console.print(f"[green]✓[/green] {len(report.proposals)} proposal(s)")
+    if write:
+        out_path = propose_mod.write_proposals(report, skill_dir)
+        console.print(f"  plan: [bold]{out_path}[/bold]")
+
+
 def register(parent: typer.Typer) -> None:
     parent.add_typer(app, name="drill")

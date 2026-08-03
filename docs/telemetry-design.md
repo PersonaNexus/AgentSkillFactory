@@ -32,6 +32,7 @@ Events currently emitted by `ForgePipeline.run`:
 | `pipeline_start` | pipeline began (stage list only; no JD text) |
 | `stage` | per-stage status (`ok` / `error` / `skipped`) + `duration_ms` |
 | `pipeline_end` | overall status + total duration |
+| `llm_usage` | prompt/completion token counts from `LLMClient` (no bodies) |
 
 Schema version: `1` (`schema_version` field on every event).
 
@@ -65,6 +66,6 @@ sink.record("custom", command="my_cmd", status="ok", duration_ms=3.2)
 ## Remaining rollout
 
 1. ~~Implement `local` mode only with unit tests and docs.~~
-2. Add token/cost counters from LLM client responses when available.
+2. ~~Add token counters from LLM client responses.~~
 3. Optional CLI flag `--telemetry local|off` overriding env.
 4. Add `remote` mode behind explicit endpoint configuration (opt-in only).

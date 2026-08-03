@@ -249,6 +249,7 @@ agentforge drill ingest <skill-dir>     # snapshot a skill directory
 agentforge drill scan <skill-dir>       # deterministic diagnostics
 agentforge drill watch <skill-dir>      # diff snapshots
 agentforge drill version <skill-dir>    # inventory evolution log
+agentforge drill propose <skill-dir>   # deterministic maintenance plan from scan
 ```
 
 `drill scan` flags four classes of issue: **missing_file** (folder lacks SKILL.md), **broken_reference** (body cites a path that's not on disk), **bloat** (body word count above threshold), **overlap** (Jaccard similarity between two skill descriptions above threshold), **tool_sprawl** (`allowed-tools` count above threshold or stale entries not mentioned in body). Thresholds are configurable per-run.
@@ -273,6 +274,7 @@ Aggregate statistics over a JD corpus + agent ↔ market gap analysis.
 ```bash
 agentforge market trends <jd-folder>                                   # top skills, breakdowns, recency split
 agentforge market gap <jd-folder> --skill-dir <agent-skills>           # coverage score + market_only / agent_only / shared
+agentforge market propose <jd-folder> --skill-dir <agent-skills>       # deterministic coverage proposals from gap
 ```
 
 `trends` surfaces top skills by frequency and role-share, breakdowns by category / domain / seniority, and a rising-vs-falling skills split when JDs carry `date:` frontmatter. `gap` compares an agent's drill SkillInventory to the corpus's clustered SkillLandscape and emits a coverage score over load-bearing market skills.
@@ -331,7 +333,7 @@ agentforge forge job_posting.txt
 # → ~/.agentforge/telemetry/events-YYYY-MM-DD.jsonl
 ```
 
-Pipeline events: `pipeline_start`, per-`stage` (`ok`/`error`/`skipped` + `duration_ms`), `pipeline_end`.
+Pipeline events: `pipeline_start`, per-`stage` (`ok`/`error`/`skipped` + `duration_ms`), `pipeline_end`, and `llm_usage` (token counts when the LLM client is used).
 Full design: [docs/telemetry-design.md](docs/telemetry-design.md). Security notes: [SECURITY.md](SECURITY.md).
 
 ## Contributing

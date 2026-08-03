@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **LLM token telemetry** — `LLMClient` accumulates usage and emits `llm_usage` events in local mode.
+- **`drill propose`** / **`market propose`** — deterministic day-2 proposal plans (no auto-edit; no proposal-time LLM).
+- CI Ruff package gate expanded to include import sorting (`I`).
 - `CONTRIBUTING.md` and USER_GUIDE updates for check, telemetry, and wiki CLI.
 - **Local telemetry** (`AGENTFORGE_TELEMETRY_MODE=local`): pipeline stage timings to
   JSONL under `~/.agentforge/telemetry/` (default off; no JD/skill content; no remote).

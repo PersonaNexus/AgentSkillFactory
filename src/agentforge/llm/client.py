@@ -108,12 +108,62 @@ class LLMClient:
         self.provider = resolved_provider
         self.model = model or DEFAULT_MODELS.get(self.provider, DEFAULT_MODELS["anthropic"])
 
+        # Cumulative token usage for this client instance (telemetry + debugging).
+        self.usage: dict[str, int] = {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+            "calls": 0,
+        }
+
         if self.provider == "openai":
             self._openai_client = openai.OpenAI(api_key=resolved_key)
             self._anthropic_client = None
         else:
             self._anthropic_client = anthropic.Anthropic(api_key=resolved_key)
             self._openai_client = None
+
+    def _record_usage(self, response: Any) -> None:
+        """Accumulate provider usage and emit local telemetry when enabled.
+
+        Never logs prompt/completion bodies — token counts and model only.
+        """
+        prompt_tokens = 0
+        completion_tokens = 0
+        usage = getattr(response, "usage", None)
+        if usage is not None:
+            # Anthropic: input_tokens / output_tokens
+            # OpenAI: prompt_tokens / completion_tokens
+            prompt_tokens = int(
+                getattr(usage, "input_tokens", None)
+                or getattr(usage, "prompt_tokens", None)
+                or 0
+            )
+            completion_tokens = int(
+                getattr(usage, "output_tokens", None)
+                or getattr(usage, "completion_tokens", None)
+                or 0
+            )
+
+        self.usage["prompt_tokens"] += prompt_tokens
+        self.usage["completion_tokens"] += completion_tokens
+        self.usage["total_tokens"] += prompt_tokens + completion_tokens
+        self.usage["calls"] += 1
+
+        try:
+            from agentforge.telemetry import get_sink
+
+            get_sink().record(
+                "llm_usage",
+                model=self.model,
+                status="ok",
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=prompt_tokens + completion_tokens,
+                provider=self.provider,
+            )
+        except Exception:  # pragma: no cover - telemetry must never break LLM calls
+            logger.debug("telemetry emit failed", exc_info=True)
 
     def extract_structured(
         self,
@@ -233,7 +283,9 @@ class LLMClient:
 
         for attempt in range(_MAX_RETRIES):
             try:
-                return self._anthropic_client.messages.create(**kwargs)
+                response = self._anthropic_client.messages.create(**kwargs)
+                self._record_usage(response)
+                return response
             except anthropic.RateLimitError as e:
                 last_error = e
                 delay = _RETRY_BASE_DELAY * (2**attempt)
@@ -323,7 +375,9 @@ class LLMClient:
 
         for attempt in range(_MAX_RETRIES):
             try:
-                return self._openai_client.chat.completions.create(**kwargs)
+                response = self._openai_client.chat.completions.create(**kwargs)
+                self._record_usage(response)
+                return response
             except openai.RateLimitError as e:
                 last_error = e
                 delay = _RETRY_BASE_DELAY * (2**attempt)
