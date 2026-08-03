@@ -1,8 +1,8 @@
 # AgentForge
 
-> **Repo/Product map:** AgentForge is the product, Python package, and CLI (`agentforge`). The public GitHub repository is [`PersonaNexus/agentforge`](https://github.com/PersonaNexus/agentforge). It was formerly named `AgentSkillFactory`; GitHub redirects old links. See [docs/repo-product-map.md](docs/repo-product-map.md) for the ecosystem map and naming policy.
+> **Repo/Product map:** AgentForge is the product, CLI, and import name (`agentforge`). The PyPI distribution is [`personanexus-agentforge`](https://pypi.org/project/personanexus-agentforge/). The public GitHub repository is [`PersonaNexus/agentforge`](https://github.com/PersonaNexus/agentforge) (formerly `AgentSkillFactory`; redirects still work). See [docs/repo-product-map.md](docs/repo-product-map.md) for the ecosystem map and naming policy.
 
-**v0.2.0** — Transform job descriptions, role descriptions, and operating context into deployable AI agent blueprints via [PersonaNexus](https://github.com/PersonaNexus/personanexus) — and keep them healthy after they ship.
+**v0.2.2** — Transform job descriptions, role descriptions, and operating context into deployable AI agent blueprints via [PersonaNexus](https://github.com/PersonaNexus/personanexus) — and keep them healthy after they ship. Install from PyPI as [`personanexus-agentforge`](https://pypi.org/project/personanexus-agentforge/).
 
 AgentForge reads a job description (txt, md, pdf, docx), extracts skills and role metadata with an LLM, maps them to [PersonaNexus](https://github.com/PersonaNexus/personanexus) personality traits, and outputs a ready-to-use agent identity — including Claude Code skill folders you can drop straight into `.claude/skills/`.
 
@@ -279,10 +279,11 @@ agentforge drill ingest <skill-dir>     # snapshot a skill directory
 agentforge drill scan <skill-dir>       # deterministic diagnostics
 agentforge drill watch <skill-dir>      # diff snapshots
 agentforge drill version <skill-dir>    # inventory evolution log
-agentforge drill propose <skill-dir>   # deterministic maintenance plan from scan
+agentforge drill propose <skill-dir>    # deterministic maintenance plan from scan
+agentforge drill apply <skill-dir> --yes --only prune_tools   # human-gated mechanical fixes
 ```
 
-`drill scan` flags four classes of issue: **missing_file** (folder lacks SKILL.md), **broken_reference** (body cites a path that's not on disk), **bloat** (body word count above threshold), **overlap** (Jaccard similarity between two skill descriptions above threshold), **tool_sprawl** (`allowed-tools` count above threshold or stale entries not mentioned in body). Thresholds are configurable per-run.
+`drill scan` flags: **missing_file** (folder lacks SKILL.md), **broken_reference** (body cites a path that's not on disk), **bloat** (body word count above threshold), **overlap** (Jaccard similarity between two skill descriptions above threshold), **tool_sprawl** (`allowed-tools` count above threshold or stale entries not mentioned in body). Thresholds are configurable per-run. `drill apply` only applies mechanical proposals (`prune_tools`, `add_skill_md`, `fix_references`) after `--yes` or interactive confirm — it never invents skill content.
 
 ### `department` — multi-agent team synthesis
 

@@ -4,19 +4,26 @@ This document keeps the public project names, GitHub repositories, Python packag
 
 ## Canonical products
 
-| Product | Public repository | Python package / CLI | Responsibility |
+| Product | Public repository | PyPI / import / CLI | Responsibility |
 |---|---|---|---|
-| **PersonaNexus** | `PersonaNexus/personanexus` | `personanexus` / `personanexus` | Declarative agent identity: YAML schema, persona compilation, validation, evaluation, Studio, and team definitions. |
-| **AgentForge** | `PersonaNexus/agentforge` | `agentforge` / `agentforge` | Skill and agent factory + day-2+ lifecycle tooling: converts job descriptions, role descriptions, and operating context into PersonaNexus identities, OpenClaw/Claude skills, teams, QA reports, and handoff artifacts; keeps live agents healthy via Tend (persona), Drill (skills), Department (team synthesis), and Market (corpus observability). |
+| **PersonaNexus** | `PersonaNexus/personanexus` | `personanexus` / `personanexus` / `personanexus` | Declarative agent identity: YAML schema, persona compilation, validation, evaluation, Studio, and team definitions. |
+| **AgentForge** | `PersonaNexus/agentforge` | **`personanexus-agentforge`** (PyPI) / import `agentforge` / CLI `agentforge` | Skill and agent factory + day-2+ lifecycle tooling: converts job descriptions, role descriptions, and operating context into PersonaNexus identities, OpenClaw/Claude skills, teams, QA reports, and handoff artifacts; keeps live agents healthy via Tend (persona), Drill (skills), Department (team synthesis), and Market (corpus observability). |
 | **Voice Packs** | `PersonaNexus/voice-packs` | adapter artifacts | Weight-level voice/personality adapters that complement PersonaNexus identities and AgentForge-generated agents. |
 
 ## Naming policy
 
-AgentForge is the product, package, and CLI name for this repository.
+AgentForge is the **product** and **CLI/import** name (`agentforge`). The **PyPI distribution name** is `personanexus-agentforge` because bare `agentforge` is taken by an unrelated project.
+
+```bash
+pip install personanexus-agentforge
+# then:
+agentforge --help
+python -c "import agentforge"
+```
 
 The GitHub repository was formerly named `AgentSkillFactory`; the canonical public repository is now `PersonaNexus/agentforge`. Public docs should therefore use this wording consistently:
 
-> AgentForge (`agentforge`) is published from the `PersonaNexus/agentforge` repository, formerly `PersonaNexus/AgentSkillFactory`.
+> AgentForge (CLI/import `agentforge`, PyPI `personanexus-agentforge`) is published from the `PersonaNexus/agentforge` repository, formerly `PersonaNexus/AgentSkillFactory`.
 
 Avoid introducing additional names such as “Agent Skill Builder” as top-level product names. Use those as features or initiatives inside AgentForge.
 

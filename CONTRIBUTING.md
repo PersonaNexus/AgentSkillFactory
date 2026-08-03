@@ -81,52 +81,45 @@ See [SECURITY.md](SECURITY.md). Non-loopback `serve` requires `AGENTFORGE_API_TO
 
 ## Publishing to PyPI
 
-Releases use GitHub Releases (`vX.Y.Z`). Workflow: `.github/workflows/publish.yml`.
+Releases use GitHub Releases (`vX.Y.Z`). Workflow: `.github/workflows/publish.yml`
+(uses `pypa/gh-action-pypi-publish` with OIDC).
 
-| Job | When | Required check? |
-|-----|------|-----------------|
+| Job | When | Notes |
+|-----|------|-------|
 | **Build distributions** | Always on release / dispatch | Verifies wheel/sdist build |
-| **Upload to PyPI** | Release (or dispatch with `dry_run=false`) | Needs one-time credential setup |
+| **Upload to PyPI** | Release (or dispatch with `dry_run=false`) | Trusted publisher on env `pypi` |
 
-### One-time credential setup (pick one)
+**Live package:** [personanexus-agentforge](https://pypi.org/project/personanexus-agentforge/)
+(CLI/import remain `agentforge`).
 
-**A) Trusted publishing (recommended)**
+### Trusted publishing (configured)
 
-1. GitHub → **Settings → Environments** → create environment named `pypi`.
-2. On [pypi.org](https://pypi.org) create/claim project **`personanexus-agentforge`**
-   (not bare `agentforge` — that name is an unrelated package).
-3. **Publishing** → Add trusted publisher:
-   - Owner: `PersonaNexus`
-   - Repository: `agentforge`
-   - Workflow name: `publish.yml`
-   - Environment name: `pypi`
-4. Publish a GitHub Release (or re-run the publish workflow).
+GitHub environment `pypi` + PyPI pending/trusted publisher for:
 
-**B) API token**
+- Owner: `PersonaNexus`
+- Repository: `agentforge`
+- Workflow: `publish.yml`
+- Environment: `pypi`
 
-1. Create a PyPI API token with upload rights for **`personanexus-agentforge`**.
-2. GitHub → **Settings → Secrets and variables → Actions** → `PYPI_TOKEN`.
-3. Re-run the publish workflow.
+Fallback: set repo secret `PYPI_TOKEN` for API-token upload.
 
 ### Dry-run build only
 
 Actions → **Publish to PyPI** → Run workflow → leave `dry_run=true` (default).
 
-### Install once published
+### Install
 
 ```bash
 pip install personanexus-agentforge
-# CLI and import stay the same:
 agentforge --help
 python -c "import agentforge; print(agentforge.__version__)"
 ```
 
-From GitHub tags (without PyPI):
+From GitHub tags:
 
 ```bash
 pip install git+https://github.com/PersonaNexus/agentforge.git@v0.2.2
 ```
 
-**Note:** A red **Publish to PyPI** run after a release means credentials/project setup
-are incomplete, not that product CI failed. The **CI** workflow (core + web) is the
-quality gate.
+**Note:** Product quality is gated by the **CI** workflow (core + web), not by
+the publish workflow.

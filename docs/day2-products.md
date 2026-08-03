@@ -8,9 +8,9 @@ The day-2+ product line fills that gap. Four sibling products under the `agentfo
 
 Every day-2+ product follows the same rules:
 
-1. **Read-only on agent source files.** Output goes to `<agent>/.tend/`, `<skill-dir>/.drill/`, `<corpus>/.agentforge/market/`, etc. — never edits the artifacts it observes.
-2. **Deterministic by default.** Ingest, scan, watch, version, trends, gap — none of these call an LLM. Two runs of an unchanged input produce identical-modulo-timestamp output.
-3. **LLM only on experimentation and proposal surfaces.** `tend ab` (judges variant SOULs against scenarios), `department synthesize --use-llm` (handoff judge + team brief), and the deferred `market propose` / `drill propose` work — those and only those touch the model.
+1. **Observe/diagnose are read-only.** Snapshots and reports go to `<agent>/.tend/`, `<skill-dir>/.drill/`, `<corpus>/.agentforge/market/`, etc. The only write path into skill sources is **human-gated** `drill apply` (mechanical fixes only, after `--yes` or interactive confirm).
+2. **Deterministic by default.** Ingest, scan, watch, version, trends, gap, propose — none of these call an LLM. Two runs of an unchanged input produce identical-modulo-timestamp output.
+3. **LLM only on experimentation and synthesis surfaces.** `tend ab` (judges variant SOULs against scenarios) and `department synthesize --use-llm` (handoff judge + team brief) touch the model. `drill propose` / `market propose` / `drill apply` are deterministic.
 4. **Observe → diagnose → propose → test → version.** Every product hits at least three of those phases; together they form a closed feedback loop on the agent's persona and capability surfaces.
 
 ## The four products
@@ -41,6 +41,8 @@ Counterpart to Tend on the *capability* surface. Auto-detects single-skill folde
 | `drill scan <skill-dir>` | Run deterministic diagnostics over the latest inventory. |
 | `drill watch <skill-dir>` | Diff two snapshots — surfaces skill_added, skill_removed, body_grew (>25%), tools_expanded, description_changed. |
 | `drill version <skill-dir>` | Inventory evolution log keyed on a fingerprint over (slug, body_sha) pairs. |
+| `drill propose <skill-dir>` | Deterministic maintenance plan from the latest scan (review-only). |
+| `drill apply <skill-dir>` | Human-gated mechanical apply (`prune_tools`, `add_skill_md`, `fix_references`); requires `--yes` or confirm. |
 | `drill snapshots <skill-dir>` | List recorded snapshots. |
 
 **Scan signals:**
@@ -91,6 +93,7 @@ Aggregate statistics over a JD corpus + agent ↔ market gap analysis. Shares th
 |---|---|
 | `market trends <jd-folder>` | Top skills by frequency + role-share, breakdowns by category / domain / seniority, optional rising-vs-falling recency split when JDs carry `date:` frontmatter and buckets are ≥2 on each side. |
 | `market gap <jd-folder> --skill-dir <agent>` | Compare an agent's drill SkillInventory to the corpus's clustered SkillLandscape. Surfaces market_only (gap), agent_only (unique value or stale), shared (covered), and a coverage score. |
+| `market propose <jd-folder> --skill-dir <agent>` | Deterministic coverage proposals from gap (review-only; does not edit agent skills). |
 
 **Severity scaling for market_only gaps:** `critical` when the cluster is `importance=required` AND appears in ≥3 roles; `warn` at ≥3 roles; `info` otherwise.
 
