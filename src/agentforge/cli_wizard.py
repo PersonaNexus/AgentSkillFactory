@@ -15,6 +15,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from agentforge.config import DEFAULT_MODEL
+
 console = Console()
 
 _JD_EXTENSIONS = {".txt", ".md", ".markdown", ".pdf", ".docx"}
@@ -178,7 +180,7 @@ def _pick_forge_options() -> dict:
     opts["mode"] = ["default", "quick", "deep"][mode_idx or 0]
 
     # Model
-    opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
+    opts["model"] = typer.prompt("LLM model", default=DEFAULT_MODEL)
 
     # Culture, examples, frameworks
     _pick_optional_context_files(opts)
@@ -196,7 +198,7 @@ def _pick_forge_options() -> dict:
 def _pick_batch_options() -> dict:
     """Gather batch-specific options interactively."""
     opts: dict = {}
-    opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
+    opts["model"] = typer.prompt("LLM model", default=DEFAULT_MODEL)
     _pick_optional_context_files(opts)
     opts["output_dir"] = typer.prompt("Output directory", default="./batch_output")
     opts["parallel"] = int(typer.prompt("Parallel workers", default="1"))
@@ -206,7 +208,7 @@ def _pick_batch_options() -> dict:
 def _pick_team_options() -> dict:
     """Gather team-specific options interactively."""
     opts: dict = {}
-    opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
+    opts["model"] = typer.prompt("LLM model", default=DEFAULT_MODEL)
     _pick_optional_context_files(opts)
 
     fmt_idx = _numbered_prompt(
@@ -229,7 +231,7 @@ def _pick_identity_import_options() -> dict:
     )
     opts["format"] = ["claude_code", "clawhub", "both"][fmt_idx or 0]
 
-    opts["model"] = typer.prompt("LLM model", default="claude-sonnet-4-20250514")
+    opts["model"] = typer.prompt("LLM model", default=DEFAULT_MODEL)
     opts["refine"] = typer.confirm("Run LLM-based refinement after import?", default=False)
     _pick_optional_context_files(opts, include_culture=False)
     opts["output_dir"] = typer.prompt("Output directory", default=".")
@@ -255,7 +257,7 @@ def _run_forge(jd_file: Path, opts: dict) -> dict:
     else:
         pipeline = ForgePipeline.default()
 
-    client = _make_client(opts.get("model", "claude-sonnet-4-20250514"))
+    client = _make_client(opts.get("model", DEFAULT_MODEL))
     context: dict = {
         "input_path": str(jd_file),
         "llm_client": client,
@@ -328,7 +330,7 @@ def _run_batch(jd_dir: Path, opts: dict) -> dict:
 
     console.print(f"[blue]Found {len(jd_files)} JD files in {jd_dir}[/blue]")
 
-    client = _make_client(opts.get("model", "claude-sonnet-4-20250514"))
+    client = _make_client(opts.get("model", DEFAULT_MODEL))
     shared_context: dict = {"llm_client": client}
     _load_optional_files_to_context(opts, shared_context)
 
@@ -353,7 +355,7 @@ def _run_team(jd_file: Path, opts: dict) -> dict:
     from agentforge.utils import safe_rel_path
 
     pipeline = ForgePipeline.team()
-    client = _make_client(opts.get("model", "claude-sonnet-4-20250514"))
+    client = _make_client(opts.get("model", DEFAULT_MODEL))
     context: dict = {
         "input_path": str(jd_file),
         "llm_client": client,
@@ -382,7 +384,7 @@ def _run_team(jd_file: Path, opts: dict) -> dict:
     for ft in forged_team_result.teammates:
         tm_dir = output_dir / ft.skill_folder.skill_name
         tm_dir.mkdir(exist_ok=True)
-        (tm_dir / "SKILL.md").write_text(ft.skill_folder.skill_md)
+        (tm_dir / "SKILL.md").write_text(ft.skill_folder.skill_md_with_references())
         for rel_path, content in ft.skill_folder.supplementary_files.items():
             ref_path = safe_rel_path(tm_dir, rel_path)
             ref_path.parent.mkdir(parents=True, exist_ok=True)

@@ -23,6 +23,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from agentforge.config import DEFAULT_MODEL
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,7 +49,7 @@ class ExtractInput(BaseModel):
 
     jd_text: str = Field(description="Full text of the job description to analyze")
     model: str = Field(
-        default="claude-sonnet-4-20250514",
+        default=DEFAULT_MODEL,
         description="LLM model to use for extraction",
     )
 
@@ -57,7 +59,7 @@ class ForgeInput(BaseModel):
 
     jd_text: str = Field(description="Full text of the job description")
     model: str = Field(
-        default="claude-sonnet-4-20250514",
+        default=DEFAULT_MODEL,
         description="LLM model to use",
     )
     quick: bool = Field(default=False, description="Skip culture, mapping, and gap analysis")
@@ -81,7 +83,7 @@ class ForgeFileInput(BaseModel):
 
     jd_path: str = Field(description="Path to a job description file (txt, md, pdf, docx)")
     model: str = Field(
-        default="claude-sonnet-4-20250514",
+        default=DEFAULT_MODEL,
         description="LLM model to use",
     )
     quick: bool = Field(default=False, description="Skip culture, mapping, and gap analysis")

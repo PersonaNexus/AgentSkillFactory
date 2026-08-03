@@ -297,7 +297,7 @@ def _run_forge(
             "coverage_gaps": context.get("coverage_gaps"),
             "skill_scores": context.get("skill_scores"),
             "skill_folder": {
-                "skill_md": sf.skill_md,
+                "skill_md": sf.skill_md_with_references(),
                 "skill_name": sf.skill_name,
                 "supplementary_files": dict(sf.supplementary_files),
             } if sf else None,

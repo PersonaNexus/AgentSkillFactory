@@ -449,20 +449,43 @@ class TestExtractErrorHandling:
 
 class TestInitCommand:
     def test_init_command(self):
-        """Test init command with mocked prompts."""
-        with patch("agentforge.config.save_config"), \
-             patch("agentforge.config.load_config", side_effect=Exception("no config")), \
-             patch("anthropic.Anthropic"):
+        """Test init command with mocked prompts.
+
+        Must complete past model-default selection (uses config.DEFAULT_MODELS)
+        and call save_config — not just print the welcome banner.
+        """
+        from agentforge.config import DEFAULT_MODEL, AgentForgeConfig
+
+        saved: list[AgentForgeConfig] = []
+
+        def _capture_save(config: AgentForgeConfig, config_path=None):
+            saved.append(config)
+            from pathlib import Path
+
+            return config_path or Path("/tmp/agentforge-test-config.yaml")
+
+        # init() imports load_config/save_config from agentforge.config at call time
+        with patch("agentforge.config.save_config", side_effect=_capture_save) as mock_save, \
+             patch("agentforge.config.load_config", return_value=AgentForgeConfig()), \
+             patch("anthropic.Anthropic") as mock_anth:
+            mock_anth.return_value.messages.create.return_value = MagicMock()
             result = runner.invoke(app, ["init"], input=(
-                "sk-test-key\n"
-                "claude-sonnet-4-20250514\n"
-                ".\n"
-                "1\n"
-                "\n"
+                "sk-ant-test-key\n"  # API key
+                f"{DEFAULT_MODEL}\n"  # default model
+                ".\n"  # output dir
+                "1\n"  # batch parallel
+                "\n"  # culture (empty)
             ))
 
-        # Init should complete (validation may fail but setup works)
         assert "Welcome to AgentForge Setup" in result.output
+        assert "ImportError" not in result.output
+        assert "_DEFAULT_MODELS" not in result.output
+        assert "Detected provider" in result.output
+        # Must get past DEFAULT_MODELS lookup and attempt save
+        assert mock_save.called or "Configuration saved" in result.output or saved
+        if saved:
+            assert saved[0].api_key == "sk-ant-test-key"
+            assert saved[0].default_model == DEFAULT_MODEL
 
 
 class TestIngestPDF:

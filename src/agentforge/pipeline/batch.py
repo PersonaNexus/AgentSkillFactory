@@ -13,6 +13,7 @@ from rich.table import Table
 
 from agentforge.models.blueprint import AgentBlueprint
 from agentforge.pipeline.forge_pipeline import ForgePipeline
+from agentforge.utils import safe_output_path, safe_rel_path
 
 console = Console()
 
@@ -66,8 +67,6 @@ class BatchProcessor:
             blueprint = self.pipeline.to_blueprint(context)
 
             # Save output files with safe filenames
-            from agentforge.utils import safe_output_path
-
             agent_id = context["identity"].metadata.id
             yaml_path = safe_output_path(self.output_dir, f"{agent_id}.yaml")
             yaml_path.write_text(context["identity_yaml"])
@@ -80,7 +79,11 @@ class BatchProcessor:
                 sf = context["skill_folder"]
                 sf_dir = safe_output_path(self.output_dir, sf.skill_name)
                 sf_dir.mkdir(exist_ok=True)
-                (sf_dir / "SKILL.md").write_text(sf.skill_md)
+                (sf_dir / "SKILL.md").write_text(sf.skill_md_with_references())
+                for rel_path, content in sf.supplementary_files.items():
+                    ref_path = safe_rel_path(sf_dir, rel_path)
+                    ref_path.parent.mkdir(parents=True, exist_ok=True)
+                    ref_path.write_text(content)
 
             duration = time.time() - start
             return BatchResult(

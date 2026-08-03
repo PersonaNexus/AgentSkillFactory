@@ -30,7 +30,7 @@ class LangGraphExporter:
                 "name": ft.teammate.name,
                 "py_id": _to_python_id(ft.teammate.name),
                 "archetype": ft.teammate.archetype,
-                "skill_md": ft.skill_folder.skill_md,
+                "skill_md": ft.skill_folder.skill_md_with_references(),
                 "skill_name": ft.skill_folder.skill_name,
             })
 

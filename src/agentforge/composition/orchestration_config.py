@@ -21,7 +21,7 @@ class OrchestrationConfigExporter:
         # Teammate skills
         for ft in team.teammates:
             path = f".claude/skills/{ft.skill_folder.skill_name}/SKILL.md"
-            files[path] = ft.skill_folder.skill_md
+            files[path] = ft.skill_folder.skill_md_with_references()
             for rel_path, content in ft.skill_folder.supplementary_files.items():
                 files[f".claude/skills/{ft.skill_folder.skill_name}/{rel_path}"] = content
 
