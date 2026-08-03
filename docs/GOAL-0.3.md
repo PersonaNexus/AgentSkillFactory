@@ -1,6 +1,6 @@
 # Goal: AgentForge 0.3 hero-path quality
 
-**Status:** implementation complete — awaiting merge  
+**Status:** shipped on main (#49 + #50 CI fix)  
 **Branch:** `feat/0.3-hero-path-forge-check`  
 **Success criteria:** A stranger can forge → auto-check → drop skill without reading day-2 docs.
 
