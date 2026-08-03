@@ -250,6 +250,21 @@ def forge(
         None, "--supplement", "-s",
         help="Supplementary source files to enrich methodology (repeatable)",
     ),
+    check: bool = typer.Option(
+        False,
+        "--check/--no-check",
+        help="Run quality check on the written skill after a successful forge",
+    ),
+    check_strict: bool = typer.Option(
+        False,
+        "--check-strict",
+        help="Also fail check on incomplete guardrail audit (implies --check)",
+    ),
+    check_domain: str = typer.Option(
+        "general",
+        "--check-domain",
+        help="Domain for guardrail audit when using --check",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
 ) -> None:
     """Forge a complete AI agent blueprint from a job description.
@@ -268,6 +283,7 @@ def forge(
         SOUL.md or want forge as an analysis-only step
 
     Pass --keep-identity-yaml to force identity.yaml on any target.
+    Use --check to gate on lint + size (+ audit with --check-strict) after write.
 
     Examples:
         agentforge forge job_posting.txt
@@ -280,6 +296,8 @@ def forge(
         agentforge forge job.txt --mode cron --schedule "0 8 * * *"
         agentforge forge job.txt --supplement convos.md --supplement runbook.md
         agentforge forge job.txt --no-methodology  # skip decision pattern extraction
+        agentforge forge job.txt --check --check-domain "data engineering"
+        agentforge forge job.txt --check-strict
     """
     from agentforge.pipeline.forge_pipeline import ForgePipeline
 
@@ -487,6 +505,10 @@ def forge(
 
     # Save identity YAML — skipped for runtimes that don't load it.
     agent_id = context["identity"].metadata.id
+    written_yaml_path: Path | None = None
+    written_skill_md: Path | None = None
+    written_skill_folder: Path | None = None
+
     _yaml_targets_skipping = {"openclaw", "plain"}
     write_identity_yaml = (
         keep_identity_yaml or target not in _yaml_targets_skipping
@@ -494,6 +516,7 @@ def forge(
     if write_identity_yaml:
         yaml_path = safe_output_path(output_dir, f"{agent_id}.yaml")
         yaml_path.write_text(identity_yaml)
+        written_yaml_path = yaml_path
         console.print(f"[green]Identity saved:[/green] {yaml_path}")
     else:
         console.print(
@@ -505,6 +528,7 @@ def forge(
     if not no_skill_file and "skill_file" in context:
         skill_path = safe_output_path(output_dir, f"{agent_id}_SKILL.md")
         skill_path.write_text(context["skill_file"])
+        written_skill_md = skill_path
         console.print(f"[green]Full agent profile saved:[/green] {skill_path}")
 
     # Save Claude Code skill folder (drop into .claude/skills/ to use)
@@ -513,6 +537,7 @@ def forge(
         folder_path = safe_output_path(output_dir, sf.skill_name)
         folder_path.mkdir(exist_ok=True)
         (folder_path / "SKILL.md").write_text(sf.skill_md_with_references())
+        written_skill_folder = folder_path
 
         # Write supplementary reference files
         for rel_path, content in sf.supplementary_files.items():
@@ -566,6 +591,84 @@ def forge(
         f"Coverage: {int(blueprint.coverage_score * 100)}% | "
         f"Automation: {int(blueprint.automation_estimate * 100)}%"
     )
+
+    # Resolve best on-disk skill path for check / next steps.
+    check_skill_path = _resolve_forged_skill_path(
+        written_skill_folder=written_skill_folder,
+        written_skill_md=written_skill_md,
+        output_dir=output_dir,
+    )
+
+    # Optional post-forge quality gate (--check-strict implies --check).
+    run_check = check or check_strict
+    check_failed = False
+    if run_check:
+        if check_skill_path is None:
+            console.print(
+                "[yellow]Skipping check:[/yellow] no skill file found under "
+                f"{output_dir} (expected skill-folder/SKILL.md or *_SKILL.md)"
+            )
+        else:
+            from agentforge.analysis.skill_check import SkillChecker
+
+            identity_for_check = (
+                written_yaml_path
+                if written_yaml_path is not None and written_yaml_path.is_file()
+                else None
+            )
+            report = SkillChecker(domain=check_domain).check_paths(
+                check_skill_path,
+                identity_file=identity_for_check,
+                strict=check_strict,
+            )
+            status_color = "green" if report.passed else "red"
+            console.print(Panel(
+                "\n".join(report.summary_lines())
+                + f"\n\n[bold]Overall:[/bold] [{status_color}]"
+                f"{'PASSED' if report.passed else 'FAILED'}[/{status_color}]",
+                title="Skill Check",
+                border_style=status_color,
+            ))
+            if not report.passed:
+                check_failed = True
+
+    # Always print next steps after a successful forge write.
+    next_lines = ["Next:"]
+    if check_skill_path is not None:
+        next_lines.append(f"  agentforge check {check_skill_path} --strict")
+    else:
+        next_lines.append("  agentforge check <skill-md-path> --strict")
+    if written_yaml_path is not None:
+        next_lines.append(f"  agentforge identity validate {written_yaml_path}")
+    next_lines.append("  # copy skill folder to .claude/skills/")
+    console.print(Panel("\n".join(next_lines), title="Next steps", border_style="cyan"))
+
+    if check_failed:
+        raise typer.Exit(code=1)
+
+
+def _resolve_forged_skill_path(
+    *,
+    written_skill_folder: Path | None,
+    written_skill_md: Path | None,
+    output_dir: Path,
+) -> Path | None:
+    """Prefer skill-folder/SKILL.md, then *_SKILL.md, else search output_dir."""
+    if written_skill_folder is not None:
+        folder_skill = written_skill_folder / "SKILL.md"
+        if folder_skill.is_file():
+            return folder_skill
+    if written_skill_md is not None and written_skill_md.is_file():
+        return written_skill_md
+
+    # Fallback discovery if paths weren't tracked (or partially written).
+    for candidate in sorted(output_dir.glob("*/SKILL.md")):
+        if candidate.is_file():
+            return candidate
+    for candidate in sorted(output_dir.glob("*_SKILL.md")):
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 # --- Identity subcommands ---

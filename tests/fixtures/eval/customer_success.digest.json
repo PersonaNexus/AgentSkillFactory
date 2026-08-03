@@ -1,0 +1,41 @@
+{
+  "frontmatter_keys": [
+    "allowed-tools",
+    "argument-hint",
+    "description",
+    "name"
+  ],
+  "frontmatter_name": "customer-success-manager",
+  "h2_headings": [
+    "Evaluation",
+    "Examples",
+    "Identity",
+    "Instructions",
+    "Templates",
+    "Usage"
+  ],
+  "identity_keys": [
+    "communication",
+    "expertise",
+    "guardrails",
+    "metadata",
+    "personality",
+    "principles",
+    "role",
+    "schema_version"
+  ],
+  "normalized_body_sha256": "8265a67a3b265eddb4fac881b55f09b39c7b8b8f797ae9a19a578a1122d615a1",
+  "num_h2": 6,
+  "num_supplementary": 7,
+  "skill_md_chars": 2387,
+  "skill_name": "customer-success-manager",
+  "supplementary_paths": [
+    "eval/advisory-board.md",
+    "eval/checklist.md",
+    "examples/bad/anti-patterns.md",
+    "instructions/methodology.md",
+    "instructions/scope.md",
+    "instructions/voice.md",
+    "templates/pipeline-report.md"
+  ]
+}
