@@ -21,7 +21,7 @@ Think of PersonaNexus as the schema, AgentForge as the factory, and Voice Packs 
 ## Install
 
 ```bash
-pip install agentforge            # core CLI
+pip install agentforge            # core CLI (PyPI when published)
 pip install "agentforge[web]"     # adds REST API + web UI
 ```
 
@@ -58,12 +58,16 @@ agentforge identity validate ./out/*.yaml
 agentforge drill ingest ./out/<skill-folder>
 agentforge drill scan ./out/<skill-folder>
 agentforge drill propose ./out/<skill-folder>
+agentforge drill apply ./out/<skill-folder> --yes --only prune_tools
 ```
 
 Copy the skill folder into `.claude/skills/` (or your OpenClaw/PersonaNexus deploy path).
 See [examples/senior-data-engineer](examples/senior-data-engineer/README.md) for a sanitized golden package.
 
-## Quick start
+## Full command reference (advanced)
+
+> Most users only need the **hero path** above. The commands below are for batch/team/day-2/power users.
+
 
 ```bash
 # Interactive wizard — guided experience for all commands
