@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **`forge --check` / `--check-strict` / `--check-domain`** — optional post-forge quality gate (exit 1 on fail).
+- Post-forge **Next steps** panel always printed.
+- **Fixture structural digests** — anti-drift locks under `tests/fixtures/eval/*.digest.json`;
+  regen via `scripts/regenerate_eval_digests.py`.
+- `docs/GOAL-0.3.md` — hero-path milestone tracking.
+
 ## [0.2.1] — 2026-08-03
 
 ### Added

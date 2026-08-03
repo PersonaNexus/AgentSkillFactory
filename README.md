@@ -50,7 +50,8 @@ The shortest path from a job description to a deployable, checked skill:
 pip install "agentforge[web]"   # or: uv sync --extra web
 export ANTHROPIC_API_KEY=sk-ant-...   # or OPENAI_API_KEY
 
-agentforge forge job_posting.txt -d ./out --skill-folder
+agentforge forge job_posting.txt -d ./out --skill-folder --check --check-strict
+# (or run check separately)
 agentforge check ./out/*/SKILL.md --domain "your domain" --strict
 agentforge identity validate ./out/*.yaml
 
