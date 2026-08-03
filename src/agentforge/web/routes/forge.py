@@ -34,11 +34,142 @@ _STAGE_MESSAGES = {
     "tool_map": "Mapping tools & workflows...",
     "team_compose": "Composing agent team...",
     "personanexus_deployment_compile": "Packaging PersonaNexus deployment files...",
+    "check": "Running quality check...",
 }
 
 
 def _get_store(request: Request) -> JobStore:
     return request.app.state.jobs
+
+
+def _truthy_form(value: str | bool | None) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).lower() in ("true", "1", "on", "yes")
+
+
+def _resolve_check_domain(explicit: str, extraction: Any | None) -> str:
+    """Prefer form domain; fall back to extraction role domain; else general."""
+    d = (explicit or "").strip()
+    if d and d.lower() not in ("auto", "from-jd", "from_jd"):
+        return d
+    if extraction is not None:
+        role = getattr(extraction, "role", None)
+        domain = getattr(role, "domain", None) if role else None
+        if isinstance(domain, str) and domain.strip():
+            return domain.strip()
+        if isinstance(extraction, dict):
+            role_d = extraction.get("role") or {}
+            domain = role_d.get("domain") if isinstance(role_d, dict) else None
+            if isinstance(domain, str) and domain.strip():
+                return domain.strip()
+    return "general"
+
+
+def _skill_md_for_check(result: dict[str, Any]) -> tuple[str | None, str]:
+    """Pick best skill body for check (Claude skill folder preferred)."""
+    sf = result.get("skill_folder")
+    if isinstance(sf, dict) and sf.get("skill_md"):
+        name = sf.get("skill_name") or "skill"
+        return str(sf["skill_md"]), f"{name}/SKILL.md"
+    ch = result.get("clawhub_skill")
+    if isinstance(ch, dict) and ch.get("skill_md"):
+        name = ch.get("skill_name") or "skill"
+        return str(ch["skill_md"]), f"{name}/SKILL.md"
+    return None, "SKILL.md"
+
+
+def _quality_check_payload(
+    skill_md: str | None,
+    identity_yaml: str | None,
+    *,
+    domain: str = "general",
+    strict: bool = False,
+    skill_path: str = "SKILL.md",
+) -> dict[str, Any] | None:
+    """Run SkillChecker and return a JSON-serializable summary + full report."""
+    if not skill_md:
+        return None
+    from agentforge.analysis.skill_check import SkillChecker
+
+    report = SkillChecker(domain=domain or "general").check(
+        skill_md,
+        identity_yaml=identity_yaml or None,
+        skill_path=skill_path,
+        identity_path="identity.yaml" if identity_yaml else None,
+        strict=strict,
+    )
+    return {
+        "passed": report.passed,
+        "strict": report.strict,
+        "domain": domain or "general",
+        "skill_path": report.skill_path,
+        "summary": report.summary_lines(),
+        "lint_ok": report.lint_ok,
+        "size_ok": report.size_ok,
+        "audit_ok": report.audit_ok,
+        "lint": {
+            "passed": report.lint.passed,
+            "error_count": report.lint.error_count,
+            "warning_count": report.lint.warning_count,
+        },
+        "size": {
+            "overall_assessment": report.size.overall_assessment,
+            "total_estimated_tokens": report.size.total_estimated_tokens,
+        },
+        "audit": {
+            "overall_passed": report.audit.overall_passed,
+            "score": report.audit.score,
+            "failed_count": report.audit.failed_count,
+        },
+    }
+
+
+def _attach_quality_check(
+    result: dict[str, Any],
+    *,
+    run_check: bool,
+    check_strict: bool,
+    check_domain: str,
+    extraction: Any | None = None,
+    job: Job | None = None,
+) -> None:
+    """Mutate *result* with a ``quality_check`` field when requested."""
+    do_check = run_check or check_strict
+    result["_check_options"] = {
+        "run_check": do_check,
+        "check_strict": check_strict,
+        "check_domain": check_domain,
+    }
+    if not do_check:
+        result["quality_check"] = None
+        return
+    skill_md, skill_path = _skill_md_for_check(result)
+    if skill_md is None:
+        result["quality_check"] = {
+            "passed": False,
+            "skipped": True,
+            "reason": "No skill content available to check",
+            "strict": check_strict,
+            "domain": _resolve_check_domain(check_domain, extraction),
+            "summary": ["check skipped: no skill content"],
+        }
+        return
+    if job is not None:
+        job.emit_stage("check", _STAGE_MESSAGES["check"])
+    domain = _resolve_check_domain(check_domain, extraction)
+    identity_yaml = result.get("identity_yaml") or None
+    if isinstance(identity_yaml, str) and not identity_yaml.strip():
+        identity_yaml = None
+    result["quality_check"] = _quality_check_payload(
+        skill_md,
+        identity_yaml,
+        domain=domain,
+        strict=check_strict,
+        skill_path=skill_path,
+    )
 
 
 def _save_identity(
@@ -83,6 +214,9 @@ def _run_forge(
     user_frameworks: str = "",
     output_format: str = "claude_code",
     anonymize: bool = False,
+    run_check: bool = True,
+    check_strict: bool = False,
+    check_domain: str = "",
 ) -> None:
     """Worker thread: runs the forge pipeline and emits SSE events."""
     try:
@@ -194,6 +328,9 @@ def _run_forge(
             "output_format": context.get("output_format", "claude_code"),
             "user_examples": user_examples,
             "user_frameworks": user_frameworks,
+            "run_check": run_check or check_strict,
+            "check_strict": check_strict,
+            "check_domain": check_domain,
         }
 
         # Include agent team composition
@@ -201,10 +338,18 @@ def _run_forge(
         if agent_team:
             result["agent_team"] = agent_team.to_dict()
 
+        _attach_quality_check(
+            result,
+            run_check=run_check,
+            check_strict=check_strict,
+            check_domain=check_domain,
+            extraction=extraction,
+            job=job,
+        )
+
         job.emit_done(result)
 
     except Exception:
-        logging.getLogger(__name__).exception("Forge pipeline failed")
         logging.getLogger(__name__).exception("Forge pipeline failed")
         job.emit_error("Pipeline failed: an internal error occurred")
     finally:
@@ -331,6 +476,9 @@ async def import_identity(
         "user_examples": user_examples,
         "user_frameworks": user_frameworks,
         "supplementary_files": supplementary_files,
+        "run_check": True,
+        "check_strict": False,
+        "check_domain": "",
     }
 
     # Build a minimal blueprint for the frontend
@@ -350,6 +498,14 @@ async def import_identity(
         automation_estimate=extraction.automation_potential,
     )
     result_update["blueprint"] = blueprint.model_dump(mode="json")
+
+    _attach_quality_check(
+        result_update,
+        run_check=True,
+        check_strict=False,
+        check_domain="",
+        extraction=extraction,
+    )
 
     job.result = result_update
     store.persist_result(job)
@@ -389,8 +545,16 @@ async def start_forge(
     user_frameworks: str = Form(""),
     output_format: str = Form("claude_code"),
     anonymize: str = Form(""),
+    run_check: str = Form("true"),
+    check_strict: str = Form(""),
+    check_domain: str = Form(""),
 ) -> dict:
-    """Start a forge pipeline job. Returns a job_id for SSE streaming."""
+    """Start a forge pipeline job. Returns a job_id for SSE streaming.
+
+    After generation, optionally runs the same quality gate as
+    ``agentforge forge --check`` (``SkillChecker``). Default is on for the
+    web hero path; ``check_strict`` matches ``--check-strict``.
+    """
     filename = file.filename or "upload.txt"
 
     # Parse trait overrides (JSON string of {trait_name: float})
@@ -446,13 +610,16 @@ async def start_forge(
         output_format=output_format,
     )
 
-    do_anonymize = anonymize.lower() in ("true", "1", "on", "yes")
+    do_anonymize = _truthy_form(anonymize)
+    do_check = _truthy_form(run_check)
+    do_strict = _truthy_form(check_strict)
 
     executor = request.app.state.executor
     executor.submit(
         _run_forge,
         job, file_path, mode, model, culture_path, filename, parsed_traits,
         user_examples, user_frameworks, output_format, do_anonymize,
+        do_check, do_strict, check_domain or "",
     )
 
     return {"job_id": job.id}
@@ -773,6 +940,27 @@ async def refine_skill(job_id: str, request: Request) -> dict:
     job.result["_refine_context"]["user_examples"] = user_examples
     job.result["_refine_context"]["user_frameworks"] = user_frameworks
 
+    # Re-run quality check with the same options as the original forge
+    check_opts = job.result.get("_check_options") or {}
+    refine_ctx_check = job.result.get("_refine_context") or {}
+    run_check = bool(
+        check_opts.get("run_check", refine_ctx_check.get("run_check", True))
+    )
+    check_strict = bool(
+        check_opts.get("check_strict", refine_ctx_check.get("check_strict", False))
+    )
+    check_domain = str(
+        check_opts.get("check_domain", refine_ctx_check.get("check_domain", "")) or ""
+    )
+    _attach_quality_check(
+        job.result,
+        run_check=run_check,
+        check_strict=check_strict,
+        check_domain=check_domain,
+        extraction=extraction,
+    )
+    quality_check = job.result.get("quality_check")
+
     # Track whether skill folder has reference files (for zip download)
     has_references = bool(existing_files)
 
@@ -795,4 +983,5 @@ async def refine_skill(job_id: str, request: Request) -> dict:
         "skill_gaps": skill_gaps,
         "identity_yaml": yaml_str,
         "has_references": has_references,
+        "quality_check": quality_check,
     }

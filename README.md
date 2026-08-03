@@ -155,18 +155,21 @@ export AGENTFORGE_API_TOKEN=$(openssl rand -hex 32)
 agentforge serve --host 0.0.0.0 --no-open
 ```
 
+The web forge UI runs the same quality gate as CLI `forge --check` by default
+(optional strict + domain). The SSE `done` payload includes a `quality_check`
+object (`passed`, `summary`, lint/size/audit flags).
+
 Key endpoints:
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `POST` | `/api/extract` | Synchronous skill extraction |
-| `POST` | `/api/forge` | Async forge job (returns `job_id`) |
+| `POST` | `/api/forge` | Async forge job (returns `job_id`); form: `run_check`, `check_strict`, `check_domain` |
 | `GET` | `/api/forge/{job_id}/stream` | SSE progress stream |
 | `GET` | `/api/forge/{job_id}/result` | Final result |
 | `POST` | `/api/batch` | Batch processing |
 | `GET` | `/health` | Health check |
 | `GET` | `/api/docs` | OpenAPI / Swagger UI |
-
 ## Docker
 
 ```bash

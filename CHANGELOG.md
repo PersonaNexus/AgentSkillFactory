@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Web forge quality check** — same `SkillChecker` gate as CLI `forge --check`
+  (default on). Form fields `run_check`, `check_strict`, `check_domain`; result
+  includes `quality_check` on SSE done / refine. UI panel shows pass/fail.
+
 ## [0.2.2] — 2026-08-03
 
 ### Added

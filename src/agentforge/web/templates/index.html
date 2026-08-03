@@ -206,6 +206,21 @@
                             <small class="config-hint">Replaces company names, people, and addresses with generic equivalents (e.g. &ldquo;Mastercard&rdquo; &rarr; &ldquo;a large fintech company&rdquo;)</small>
                         </div>
 
+                        <!-- Quality check (matches CLI forge --check) -->
+                        <div class="config-quality-check">
+                            <label class="config-label-inline" title="Same gate as agentforge forge --check: lint + size (+ audit when strict).">
+                                <input type="checkbox" name="run_check" value="true" checked>
+                                Run quality check after forge <span class="info-icon">&#9432;</span>
+                            </label>
+                            <label class="config-label-inline" title="Also fail when guardrail audit is incomplete (agentforge forge --check-strict).">
+                                <input type="checkbox" name="check_strict" value="true" id="forge-check-strict">
+                                Strict mode (audit must pass) <span class="info-icon">&#9432;</span>
+                            </label>
+                            <label class="config-label" for="forge-check-domain" title="Domain for guardrail audit. Leave empty to use the role domain from the JD.">Check domain</label>
+                            <input type="text" name="check_domain" id="forge-check-domain" placeholder="auto from JD (or e.g. data engineering)">
+                            <small class="config-hint">Matches CLI <code>forge --check</code> / <code>--check-strict</code> / <code>--check-domain</code></small>
+                        </div>
+
                         <!-- Enhance Quality -->
                         <details class="config-enhance">
                             <summary>Enhance Skill Quality <span class="info-icon" title="Providing real-world examples and frameworks dramatically improves the generated skill. Without these, the pipeline infers methodology from the JD alone &mdash; which produces generic workflows instead of expert decision-making rules.">&#9432;</span></summary>
