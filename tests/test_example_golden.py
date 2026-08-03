@@ -69,14 +69,12 @@ class TestExampleSkillFolderGolden:
         # Default gate ignores audit incompleteness (example is known soft on guardrails)
         assert report.passed
 
-    def test_skill_check_strict_may_fail_audit(self, example_present: None) -> None:
-        report = SkillChecker().check_paths(SKILL_DIR / "SKILL.md", strict=True)
-        # Document current example quality: strict can fail without being a test failure
-        # as long as the checker is consistent.
-        if not report.audit_ok:
-            assert not report.passed
-        else:
-            assert report.passed
+    def test_skill_check_strict_passes_public_example(self, example_present: None) -> None:
+        report = SkillChecker(domain="data engineering").check_paths(
+            SKILL_DIR / "SKILL.md", strict=True
+        )
+        assert report.audit_ok, report.summary_lines()
+        assert report.passed
 
 
 class TestPersonaNexusDeploymentGolden:

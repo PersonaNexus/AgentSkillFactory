@@ -1,6 +1,6 @@
 # AgentForge Telemetry & Observability Design (Opt-In)
 
-Status: design-only. No telemetry collection is enabled by default.
+Status: **local mode implemented**. Remote export remains design-only.
 
 ## Goals
 
@@ -14,57 +14,57 @@ Status: design-only. No telemetry collection is enabled by default.
 - AgentForge sends no telemetry to any remote endpoint unless the user explicitly opts in.
 - Local logs/metrics can be enabled without any network transmission.
 
-## Proposed Metric Set
+## Implemented: local mode
 
-- Command-level:
-  - command name (`extract`, `forge`, `test`, etc.)
-  - success/failure
-  - wall-clock duration
-- Pipeline-level:
-  - stage timing breakdown
-  - stage failure point
-  - output target (`openclaw`, `personanexus`, `both`)
-- LLM usage (when available from provider responses):
-  - model name
-  - prompt tokens
-  - completion tokens
-  - estimated cost
+```bash
+export AGENTFORGE_TELEMETRY_MODE=local
+# optional:
+export AGENTFORGE_TELEMETRY_DIR=~/.agentforge/telemetry
 
-## Explicitly Excluded By Default
+agentforge forge job.txt
+# appends JSONL events to $AGENTFORGE_TELEMETRY_DIR/events-YYYY-MM-DD.jsonl
+```
+
+Events currently emitted by `ForgePipeline.run`:
+
+| event | meaning |
+|-------|---------|
+| `pipeline_start` | pipeline began (stage list only; no JD text) |
+| `stage` | per-stage status (`ok` / `error` / `skipped`) + `duration_ms` |
+| `pipeline_end` | overall status + total duration |
+
+Schema version: `1` (`schema_version` field on every event).
+
+### Explicitly excluded
 
 - Raw JD text
 - Generated identity/skill content
 - Prompt bodies
 - User-supplied supplemental documents
+- File paths by default
 
-## Privacy Boundaries
+## Configuration
 
-- Hash-only identifiers for runs/sessions (no direct personal identifiers).
-- Optional project label allowed, but no file path collection by default.
-- Redaction step before any optional remote export.
+| Variable | Values | Default |
+|----------|--------|---------|
+| `AGENTFORGE_TELEMETRY_MODE` | `off`, `local` (`on`/`file` alias → local) | `off` |
+| `AGENTFORGE_TELEMETRY_DIR` | directory path | `~/.agentforge/telemetry` |
 
-## Configuration Shape (Proposed)
+`remote` / `AGENTFORGE_TELEMETRY_ENDPOINT` are **not** implemented. Setting mode to
+`remote` behaves as `off` until a future release.
 
-Environment variables:
+## Library API
 
-- `AGENTFORGE_TELEMETRY_MODE=off|local|remote`
-- `AGENTFORGE_TELEMETRY_ENDPOINT=https://...` (required only for `remote`)
-- `AGENTFORGE_TELEMETRY_SAMPLE_RATE=0.0-1.0`
+```python
+from agentforge.telemetry import get_sink, TelemetryEvent
 
-CLI flags (override env):
+sink = get_sink()
+sink.record("custom", command="my_cmd", status="ok", duration_ms=3.2)
+```
 
-- `--telemetry off|local|remote`
-- `--telemetry-endpoint URL`
+## Remaining rollout
 
-## Modes
-
-- `off` (default): no telemetry collection.
-- `local`: write metrics to local JSONL file only.
-- `remote`: same local write plus batched export to configured endpoint.
-
-## Rollout Plan
-
-1. Implement `local` mode only with unit tests and docs.
-2. Add schema versioning for telemetry events.
-3. Add `remote` mode behind explicit endpoint configuration.
-4. Add integration test to verify no network calls in `off` mode.
+1. ~~Implement `local` mode only with unit tests and docs.~~
+2. Add token/cost counters from LLM client responses when available.
+3. Optional CLI flag `--telemetry local|off` overriding env.
+4. Add `remote` mode behind explicit endpoint configuration (opt-in only).
