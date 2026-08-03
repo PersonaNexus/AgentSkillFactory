@@ -19,7 +19,7 @@ from agentforge.generation.skill_folder import SkillFolderGenerator
 from agentforge.models.extracted_skills import ExtractionResult, MethodologyExtraction
 
 
-class EvalResult(BaseModel):
+class EvalResult(BaseModel):  # type: ignore[misc]
     """Outcome of one fixture evaluation."""
 
     fixture: str
