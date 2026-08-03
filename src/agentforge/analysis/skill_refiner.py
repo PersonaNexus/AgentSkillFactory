@@ -10,6 +10,7 @@ from agentforge.models.extracted_skills import (
     QualityCriterion,
     TriggerTechniqueMapping,
 )
+from agentforge.utils import make_skill_slug, safe_filename
 
 
 class SkillRefiner:
@@ -46,7 +47,7 @@ class SkillRefiner:
         # Include uploaded files as reference documents
         if uploaded_files:
             for filename, content in uploaded_files.items():
-                safe_name = self._safe_filename(filename)
+                safe_name = safe_filename(filename)
                 supplementary[f"references/{safe_name}"] = content
 
         for category, text in edits.items():
@@ -136,7 +137,7 @@ class SkillRefiner:
 
         # Also save as a template file if content is substantial
         if supplementary is not None and len(text) > 100:
-            slug = self._safe_filename(name)
+            slug = make_skill_slug(name)
             supplementary[f"templates/{slug}.md"] = (
                 f"# {name}\n\n"
                 "Use this as a reference template for output formatting.\n\n"
@@ -292,12 +293,3 @@ class SkillRefiner:
         # Return as single entry
         return [lines]
 
-    @staticmethod
-    def _safe_filename(name: str) -> str:
-        """Convert a name to a safe filename slug."""
-        import re
-
-        slug = name.lower().strip()
-        slug = re.sub(r"[^\w\s-]", "", slug)
-        slug = re.sub(r"[\s_-]+", "-", slug).strip("-")
-        return slug[:80] or "file"

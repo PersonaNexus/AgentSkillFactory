@@ -714,7 +714,7 @@ def identity_import(
         "claude_code", "--format", "-f", help="Output format: claude_code, clawhub, or both"
     ),
     model: str = typer.Option(
-        "claude-sonnet-4-20250514", "--model", "-m", help="Claude model to use for refinement"
+        DEFAULT_MODEL, "--model", "-m", help="Claude model to use for refinement"
     ),
     examples: Path | None = typer.Option(
         None, "--examples", "-e",
@@ -822,7 +822,7 @@ def identity_import(
         (folder_path / "SKILL.md").write_text(sf.skill_md_with_references())
 
         for rel_path, content in sf.supplementary_files.items():
-            ref_path = folder_path / rel_path
+            ref_path = safe_rel_path(folder_path, rel_path)
             ref_path.parent.mkdir(parents=True, exist_ok=True)
             ref_path.write_text(content)
 
@@ -1067,7 +1067,7 @@ def team(
         Path("./team_output"), "--output-dir", "-d", help="Directory for output files"
     ),
     model: str = typer.Option(
-        "claude-sonnet-4-20250514", "--model", "-m", help="Claude model to use"
+        DEFAULT_MODEL, "--model", "-m", help="Claude model to use"
     ),
     culture: Path | None = typer.Option(
         None, "--culture", "-c", help="Culture file to apply to all agents"
@@ -1160,9 +1160,9 @@ def team(
     for ft in forged_team_result.teammates:
         tm_dir = output_dir / ft.skill_folder.skill_name
         tm_dir.mkdir(exist_ok=True)
-        (tm_dir / "SKILL.md").write_text(ft.skill_folder.skill_md)
+        (tm_dir / "SKILL.md").write_text(ft.skill_folder.skill_md_with_references())
         for rel_path, content in ft.skill_folder.supplementary_files.items():
-            ref_path = tm_dir / rel_path
+            ref_path = safe_rel_path(tm_dir, rel_path)
             ref_path.parent.mkdir(parents=True, exist_ok=True)
             ref_path.write_text(content)
         console.print(f"[green]Agent saved:[/green] {tm_dir}/SKILL.md ({ft.teammate.archetype})")
@@ -1232,7 +1232,7 @@ def team(
 def test(
     jd_file: Path = typer.Argument(..., help="Path to job description file"),
     model: str = typer.Option(
-        "claude-sonnet-4-20250514", "--model", "-m", help="Claude model to use"
+        DEFAULT_MODEL, "--model", "-m", help="Claude model to use"
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
 ) -> None:
@@ -1351,8 +1351,9 @@ def init() -> None:
     console.print(f"[dim]Detected provider: {provider_display}[/dim]")
 
     # Default model (suggest appropriate model for detected provider)
-    from agentforge.llm.client import _DEFAULT_MODELS
-    suggested_model = _DEFAULT_MODELS.get(detected_provider, existing.default_model)
+    from agentforge.config import DEFAULT_MODELS
+
+    suggested_model = DEFAULT_MODELS.get(detected_provider, existing.default_model)
     default_model = typer.prompt(
         "Default model",
         default=suggested_model if existing.default_model.startswith("claude") and detected_provider == "openai" else existing.default_model,
@@ -1438,7 +1439,7 @@ def refine(
         Path("."), "--output-dir", "-d", help="Directory for refined output"
     ),
     model: str = typer.Option(
-        "claude-sonnet-4-20250514", "--model", "-m", help="Claude model to use"
+        DEFAULT_MODEL, "--model", "-m", help="Claude model to use"
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable debug logging"),
 ) -> None:
@@ -1559,7 +1560,7 @@ def interview(
         help="Immediately forge an agent from the interview output",
     ),
     model: str = typer.Option(
-        "claude-sonnet-4-20250514", "--model", "-m", help="Claude model for forging"
+        DEFAULT_MODEL, "--model", "-m", help="Claude model for forging"
     ),
     output_dir: Path = typer.Option(
         Path("."), "--output-dir", "-d", help="Output directory for forge results"

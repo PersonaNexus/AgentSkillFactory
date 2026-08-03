@@ -88,7 +88,9 @@ def _run_batch(
                     output_files[f"{agent_id}_SKILL.md"] = bp.skill_file
                 if bp.skill_folder:
                     skill_name = safe_filename(bp.skill_folder.skill_name)
-                    output_files[f"{skill_name}/SKILL.md"] = bp.skill_folder.skill_md
+                    output_files[f"{skill_name}/SKILL.md"] = (
+                        bp.skill_folder.skill_md_with_references()
+                    )
                     for rel_path, content in bp.skill_folder.supplementary_files.items():
                         safe_parts = [safe_filename(p) for p in Path(rel_path).parts]
                         safe_rel = "/".join(safe_parts)

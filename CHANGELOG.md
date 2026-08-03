@@ -13,6 +13,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (default on). Form fields `run_check`, `check_strict`, `check_domain`; result
   includes `quality_check` on SSE done / refine. UI panel shows pass/fail.
 
+### Fixed
+
+- **`agentforge init`** — use `config.DEFAULT_MODELS` (broken import of nonexistent
+  `_DEFAULT_MODELS` from llm client).
+- **Skill write parity** — batch, team CLI/wizard, web forge/batch, and composition
+  exports write/store `skill_md_with_references()` so reference links are not dropped.
+- **Path safety** — identity import and team teammate ref writes use `safe_rel_path`.
+
+### Changed
+
+- Model option defaults and MCP schemas use `config.DEFAULT_MODEL` / `DEFAULT_MODELS`
+  instead of hardcoded Sonnet strings.
+- `SkillRefiner` uses shared `safe_filename` / `make_skill_slug` helpers.
+
 ## [0.2.2] — 2026-08-03
 
 ### Added

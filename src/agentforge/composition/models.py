@@ -20,7 +20,7 @@ class ForgedTeammate:
             "identity_yaml": self.identity_yaml,
             "skill_folder": {
                 "skill_name": self.skill_folder.skill_name,
-                "skill_md": self.skill_folder.skill_md,
+                "skill_md": self.skill_folder.skill_md_with_references(),
                 "supplementary_files": self.skill_folder.supplementary_files,
             },
         }
