@@ -67,6 +67,13 @@ agentforge team job_posting.txt -d ./team-output
 
 # Test a forged skill against generated scenarios
 agentforge test job_posting.txt
+
+# One-shot quality gate (lint + size + audit)
+agentforge check output/SKILL.md
+agentforge check .claude/skills/my-agent --identity identity.yaml
+
+# Validate a PersonaNexus identity YAML
+agentforge identity validate identity.yaml
 ```
 
 ## Examples & showcase

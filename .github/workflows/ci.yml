@@ -27,7 +27,7 @@ jobs:
         run: uv sync --dev
 
       - name: Run core test suite
-        run: uv run pytest -q --cov=agentforge --cov-report=term-missing --cov-fail-under=55
+        run: uv run pytest -q --cov=agentforge --cov-report=term-missing --cov-fail-under=60
 
       - name: Ruff — critical errors across package
         # E501 deferred; full style rule expansion tracked separately.
@@ -38,11 +38,15 @@ jobs:
           uv run ruff check
           src/agentforge/utils.py
           src/agentforge/cli_quality.py
+          src/agentforge/analysis/skill_check.py
           src/agentforge/web/auth.py
           src/agentforge/wiki_memory/typer_cli.py
           tests/test_cli_quality.py
           tests/test_cli_stability.py
           tests/test_utils.py
+          tests/test_skill_check.py
+          tests/test_example_golden.py
+          tests/test_mcp_server.py
 
       - name: Run mypy on core modules
         run: >-
@@ -50,6 +54,7 @@ jobs:
           src/agentforge/utils.py
           src/agentforge/pipeline/forge_pipeline.py
           src/agentforge/cli_quality.py
+          src/agentforge/analysis/skill_check.py
           src/agentforge/web/auth.py
 
       - name: Build package

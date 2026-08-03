@@ -24,6 +24,7 @@ def register(parent: typer.Typer) -> None:
     parent.command()(cost)
     parent.command(name="prompt-diff")(prompt_diff)
     parent.command()(audit)
+    parent.command()(check)
 
 
 def prompt_size(
@@ -321,11 +322,99 @@ def prompt_diff(
                 )
             console.print()
 
+def check(
+    skill_file: Path = typer.Argument(..., help="Path to a SKILL.md file (or skill folder)"),
+    identity: Path | None = typer.Option(
+        None, "--identity", "-i", help="Optional identity YAML to include in size analysis"
+    ),
+    domain: str = typer.Option(
+        "general", "--domain", "-d", help="Domain for guardrail audit checks"
+    ),
+    budget: int = typer.Option(8000, "--budget", "-b", help="Token budget for size warnings"),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Also fail when the guardrail audit does not fully pass",
+    ),
+    format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
+) -> None:
+    """Run lint + prompt-size + guardrail audit in one pass.
+
+    Default exit code 1 when lint errors exist or the skill is bloated.
+    Use --strict to also fail on incomplete guardrail coverage.
+
+    Examples:
+        agentforge check output/SKILL.md
+        agentforge check .claude/skills/my-agent --identity identity.yaml
+        agentforge check skill.md --strict --format json
+    """
+    from agentforge.analysis.skill_check import SkillChecker
+
+    path = skill_file
+    if path.is_dir():
+        path = path / "SKILL.md"
+    if not path.exists():
+        console.print(f"[red]Error:[/red] File not found: {path}")
+        raise typer.Exit(code=1)
+    if identity is not None and not identity.exists():
+        console.print(f"[red]Error:[/red] Identity not found: {identity}")
+        raise typer.Exit(code=1)
+
+    report = SkillChecker(token_budget=budget, domain=domain).check_paths(
+        path, identity_file=identity, strict=strict
+    )
+
+    if format == "json":
+        console.print(json.dumps(report.model_dump(), indent=2, default=str))
+    else:
+        status_color = "green" if report.passed else "red"
+        console.print(Panel(
+            "\n".join(report.summary_lines())
+            + f"\n\n[bold]Overall:[/bold] [{status_color}]"
+            f"{'PASSED' if report.passed else 'FAILED'}[/{status_color}]",
+            title="Skill Check",
+            border_style=status_color,
+        ))
+        if report.lint.issues:
+            table = Table(title="Lint issues", show_lines=True)
+            table.add_column("Rule", style="cyan")
+            table.add_column("Severity")
+            table.add_column("Message", max_width=60)
+            for issue in report.lint.issues[:15]:
+                color = {"error": "red", "warning": "yellow", "info": "blue"}.get(
+                    issue.severity, "white"
+                )
+                table.add_row(
+                    issue.rule,
+                    f"[{color}]{issue.severity}[/{color}]",
+                    issue.message,
+                )
+            console.print(table)
+        if not report.audit_ok and report.audit.failed_count:
+            console.print(
+                f"[dim]Audit failed checks: {report.audit.failed_count} "
+                f"(re-run with `agentforge audit` for detail"
+                f"{'; add --strict to fail the gate' if not strict else ''})[/dim]"
+            )
+
+    if not report.passed:
+        raise typer.Exit(code=1)
+
+
 def audit(
     skill_file: Path = typer.Argument(..., help="Path to a SKILL.md file to audit"),
-    domain: str = typer.Option("general", "--domain", "-d", help="Role domain for domain-specific guardrail checks"),
-    fix: bool = typer.Option(False, "--fix", help="Auto-inject missing guardrails into the skill file"),
-    output: Path | None = typer.Option(None, "--output", "-o", help="Output path for fixed file (defaults to stdout)"),
+    domain: str = typer.Option(
+        "general",
+        "--domain",
+        "-d",
+        help="Role domain for domain-specific guardrail checks",
+    ),
+    fix: bool = typer.Option(
+        False, "--fix", help="Auto-inject missing guardrails into the skill file"
+    ),
+    output: Path | None = typer.Option(
+        None, "--output", "-o", help="Output path for fixed file (defaults to stdout)"
+    ),
     format: str = typer.Option("table", "--format", "-f", help="Output format: table or json"),
 ) -> None:
     """Audit a SKILL.md file against a comprehensive guardrail safety checklist."""

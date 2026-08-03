@@ -7,6 +7,8 @@ Features that extend AgentForge from a one-shot forge into a closed-loop agent d
 | Surface | Description | Status |
 |---------|-------------|--------|
 | `agentforge forge` / `extract` / `batch` / `team` | Bootstrap factory from JDs | Shipped |
+| `agentforge check` | One-shot lint + size + audit quality gate | Shipped |
+| `agentforge identity validate` | PersonaNexus schema validation | Shipped |
 | `agentforge prompt-size` | Measure prompt size per section, detect bloat | Shipped |
 | `agentforge lint` | Structural + semantic linting | Shipped |
 | `agentforge audit [--fix]` | Safety guardrail audit with auto-fix | Shipped |
