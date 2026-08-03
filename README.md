@@ -334,6 +334,10 @@ agentforge forge job_posting.txt
 Pipeline events: `pipeline_start`, per-`stage` (`ok`/`error`/`skipped` + `duration_ms`), `pipeline_end`.
 Full design: [docs/telemetry-design.md](docs/telemetry-design.md). Security notes: [SECURITY.md](SECURITY.md).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, gates, and PR expectations.
+
 ## Development quality gates
 
 CI runs two jobs:
