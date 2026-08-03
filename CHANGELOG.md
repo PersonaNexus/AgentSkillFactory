@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] — 2026-08-03
+
+### Added
+
+- **`drill apply`** — human-gated application of mechanical proposals
+  (`prune_tools`, `add_skill_md`, `fix_references`) via `--yes` or interactive confirm.
+- **Broader fixture eval rubrics** — min skills, title presence, frontmatter name,
+  guardrails, methodology enrichment.
+- **PyPI publish workflow** (`.github/workflows/publish.yml`) via trusted publishing
+  on GitHub Release (requires one-time PyPI OIDC setup for this repo).
+
+### Changed
+
+- README emphasizes hero path; full CLI listed as advanced.
+- Package version 0.2.1.
+
 ## [0.2.0] — 2026-08-03
 
 Public Alpha hardening release: quality gates, local telemetry, day-2 propose,

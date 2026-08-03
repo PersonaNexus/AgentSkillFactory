@@ -77,3 +77,18 @@ See [SECURITY.md](SECURITY.md). Non-loopback `serve` requires `AGENTFORGE_API_TO
 | Telemetry | [docs/telemetry-design.md](docs/telemetry-design.md) |
 | Showcase examples | [docs/showcase.md](docs/showcase.md) |
 | Feature roadmap | [docs/FEATURE_ROADMAP.md](docs/FEATURE_ROADMAP.md) |
+
+
+## Publishing to PyPI
+
+Releases are cut with GitHub Releases (`vX.Y.Z`). The `publish.yml` workflow builds
+with `uv build` and uploads via **Trusted Publishing** (OIDC).
+
+One-time setup on [pypi.org](https://pypi.org):
+
+1. Create/claim the `agentforge` project.
+2. Add a trusted publisher: GitHub org/repo `PersonaNexus/agentforge`,
+   workflow `publish.yml`, environment `pypi`.
+3. Publish a GitHub Release — CI uploads wheels/sdist.
+
+Dry-run: Actions → Publish to PyPI → Run workflow with `dry_run=true`.

@@ -1,0 +1,45 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build only (do not upload)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  # Trusted publishing (OIDC) — configure this project on pypi.org
+  id-token: write
+
+jobs:
+  publish:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@e58605a9b6da7c637471fab8847a5e5a6b8df081 # v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Upload to PyPI
+        if: ${{ github.event_name == 'release' || inputs.dry_run == false }}
+        run: uv publish
+        # Requires PyPI project "agentforge" trusted publisher for this repo.
+        # Fallback: set repository secret PYPI_TOKEN and use:
+        #   UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}

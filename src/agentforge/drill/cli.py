@@ -301,5 +301,100 @@ def cmd_propose(
         console.print(f"  plan: [bold]{out_path}[/bold]")
 
 
+@app.command("apply")
+def cmd_apply(
+    skill_dir: Path = typer.Argument(
+        ...,
+        help="Skill folder or parent directory.",
+    ),
+    from_file: Path | None = typer.Option(
+        None,
+        "--from",
+        help="propose-*.json path (default: latest under <skill-dir>/.drill/).",
+    ),
+    yes: bool = typer.Option(
+        False,
+        "--yes", "-y",
+        help="Apply without interactive confirmation (still only mechanical actions).",
+    ),
+    only: list[str] | None = typer.Option(
+        None,
+        "--only",
+        help="Only apply these actions (repeatable): prune_tools, add_skill_md, fix_references.",
+    ),
+    write: bool = typer.Option(
+        True, "--write/--no-write",
+        help="Persist apply-*.json under <skill-dir>/.drill/.",
+    ),
+) -> None:
+    """Apply mechanical drill proposals under a human gate.
+
+    Safe auto-actions only: prune_tools, add_skill_md, fix_references.
+    Design judgments (split_body, differentiate_skills) are always skipped.
+
+    Examples:
+        agentforge drill apply ./skills --from .drill/propose-....json
+        agentforge drill apply ./skills --yes --only prune_tools
+    """
+    from agentforge.drill import apply as apply_mod
+
+    skill_dir = _validate_skill_dir(skill_dir)
+    plan_path = from_file
+    if plan_path is None:
+        plan_path = apply_mod.latest_propose_json(skill_dir)
+    if plan_path is None or not plan_path.is_file():
+        console.print(
+            "[red]No propose-*.json found.[/red] Run `drill propose` first "
+            "or pass --from path/to/propose-….json"
+        )
+        raise typer.Exit(code=1)
+
+    report = apply_mod.load_proposal_report(plan_path)
+    only_set = set(only) if only else None
+
+    from agentforge.drill.propose import Proposal
+
+    def _confirm(p: Proposal) -> bool:
+        return typer.confirm(
+            f"Apply {p.action} on {p.skill or skill_dir.name}? {p.title}",
+            default=False,
+        )
+
+    apply_report = apply_mod.apply_proposals(
+        skill_dir,
+        report,
+        confirm=yes,
+        only_actions=only_set,
+        confirm_fn=None if yes else _confirm,
+    )
+
+    table = Table(title=f"drill apply — {skill_dir}", show_lines=False)
+    table.add_column("Status", style="bold")
+    table.add_column("Action", style="cyan")
+    table.add_column("Skill", style="dim")
+    table.add_column("Detail", max_width=50)
+    for r in apply_report.results:
+        color = {
+            "applied": "green",
+            "skipped": "yellow",
+            "declined": "dim",
+            "failed": "red",
+        }.get(r.status, "white")
+        table.add_row(
+            f"[{color}]{r.status}[/{color}]",
+            r.action,
+            r.skill or "—",
+            r.detail,
+        )
+    console.print(table)
+    console.print(
+        f"[green]✓[/green] applied: {apply_report.applied_count} · "
+        f"skipped/declined: {apply_report.skipped_count}"
+    )
+    if write:
+        out = apply_mod.write_apply_report(apply_report, skill_dir)
+        console.print(f"  report: [bold]{out}[/bold]")
+
+
 def register(parent: typer.Typer) -> None:
     parent.add_typer(app, name="drill")

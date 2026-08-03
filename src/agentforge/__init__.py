@@ -1,6 +1,6 @@
 """AgentForge Factory — Transform job descriptions into deployable AI agent blueprints."""
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 # Public API — importable as `from agentforge import ...`
 from agentforge.extraction.skill_extractor import SkillExtractor
