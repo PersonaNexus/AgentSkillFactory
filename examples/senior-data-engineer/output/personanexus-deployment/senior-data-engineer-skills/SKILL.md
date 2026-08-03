@@ -43,6 +43,15 @@ See `examples/good/` for reference output and `examples/bad/` for anti-patterns 
 
 > **Skill Quality Note:** This skill was generated without real-world examples or work samples, specific frameworks or methodologies. Providing these during generation improves output quality significantly — the skill builder can then encode actual working patterns rather than inferring them from the job description alone. Re-run the forge with supplemental data for a more actionable skill.
 
+
+## Guardrails
+
+- **No Fabrication:** Never fabricate or hallucinate information. If uncertain, explicitly state limitations rather than guessing.
+- **Escalation:** Defer to human judgment for decisions that require authority, nuanced context, or carry significant consequences.
+- **Confidence Signals:** Acknowledge uncertainty and limitations. Clearly distinguish between confident recommendations and speculative suggestions.
+- **No Harmful Content:** Never generate harmful, misleading, or unethical content under any circumstances.
+- **Data Privacy:** Handle personal and sensitive data with care. Never expose PII or confidential information.
+
 ## Usage
 
 This skill accepts optional arguments via `$ARGUMENTS` to focus on a specific task or area. For example:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 from agentforge.models.blueprint import AgentBlueprint
@@ -24,6 +25,8 @@ from agentforge.pipeline.stages import (
     TeamForgeStage,
     ToolMapStage,
 )
+from agentforge.telemetry import get_sink
+from agentforge.telemetry.events import new_run_id
 
 
 class ForgePipeline:
@@ -31,6 +34,9 @@ class ForgePipeline:
 
     Supports adding, removing, and skipping stages. The pipeline passes
     a context dict through each stage sequentially.
+
+    When ``AGENTFORGE_TELEMETRY_MODE=local``, stage timings are written to
+    local JSONL (no JD/skill content, no network).
     """
 
     def __init__(self) -> None:
@@ -49,10 +55,78 @@ class ForgePipeline:
 
     def run(self, context: dict[str, Any]) -> dict[str, Any]:
         """Execute all non-skipped stages sequentially."""
-        for stage in self.stages:
-            if stage.name not in self._skipped:
-                context = stage.run(context)
-        return context
+        sink = get_sink()
+        run_id = context.get("_telemetry_run_id") or new_run_id()
+        context["_telemetry_run_id"] = run_id
+        model = None
+        client = context.get("llm_client")
+        if client is not None:
+            model = getattr(client, "model", None)
+
+        pipeline_t0 = time.perf_counter()
+        sink.record(
+            "pipeline_start",
+            run_id=run_id,
+            command="forge_pipeline",
+            status="ok",
+            model=model,
+            stages=[s.name for s in self.stages if s.name not in self._skipped],
+        )
+
+        try:
+            for stage in self.stages:
+                if stage.name in self._skipped:
+                    sink.record(
+                        "stage",
+                        run_id=run_id,
+                        stage=stage.name,
+                        status="skipped",
+                        model=model,
+                    )
+                    continue
+                t0 = time.perf_counter()
+                try:
+                    context = stage.run(context)
+                except Exception:
+                    duration_ms = (time.perf_counter() - t0) * 1000.0
+                    sink.record(
+                        "stage",
+                        run_id=run_id,
+                        stage=stage.name,
+                        status="error",
+                        duration_ms=duration_ms,
+                        model=model,
+                    )
+                    sink.record(
+                        "pipeline_end",
+                        run_id=run_id,
+                        status="error",
+                        duration_ms=(time.perf_counter() - pipeline_t0) * 1000.0,
+                        model=model,
+                        failed_stage=stage.name,
+                    )
+                    raise
+                duration_ms = (time.perf_counter() - t0) * 1000.0
+                sink.record(
+                    "stage",
+                    run_id=run_id,
+                    stage=stage.name,
+                    status="ok",
+                    duration_ms=duration_ms,
+                    model=model,
+                )
+
+            sink.record(
+                "pipeline_end",
+                run_id=run_id,
+                status="ok",
+                duration_ms=(time.perf_counter() - pipeline_t0) * 1000.0,
+                model=model,
+            )
+            return context
+        except Exception:
+            # pipeline_end already recorded on stage error; re-raise
+            raise
 
     def to_blueprint(self, context: dict[str, Any]) -> AgentBlueprint:
         """Convert pipeline context into an AgentBlueprint."""
@@ -72,7 +146,7 @@ class ForgePipeline:
 
     @classmethod
     def default(cls) -> ForgePipeline:
-        """Standard pipeline: ingest -> [anonymize] -> extract -> methodology -> map -> culture -> generate -> tool_map -> analyze -> team."""
+        """Standard pipeline: ingest → extract → map → culture → generate → analyze → team."""
         pipeline = cls()
         pipeline.add_stage(IngestStage())
         pipeline.add_stage(AnonymizeStage())

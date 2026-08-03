@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Local telemetry** (`AGENTFORGE_TELEMETRY_MODE=local`): pipeline stage timings to
+  JSONL under `~/.agentforge/telemetry/` (default off; no JD/skill content; no remote).
 - `agentforge check` — one-shot lint + prompt-size + guardrail audit gate
   (`--strict` also fails on incomplete audit coverage).
 - `agentforge identity validate` — PersonaNexus schema validation without import.
@@ -19,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - CI coverage floor raised from 55% to 60%.
+- Public example skills hardened to pass `check --strict` (data-engineering domain).
+- README: quality gates, telemetry, wiki CLI, and CI matrix updated to match reality.
 
 ### Previously
 

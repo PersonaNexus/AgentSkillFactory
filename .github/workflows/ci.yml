@@ -47,6 +47,8 @@ jobs:
           tests/test_skill_check.py
           tests/test_example_golden.py
           tests/test_mcp_server.py
+          tests/test_telemetry.py
+          src/agentforge/telemetry/
 
       - name: Run mypy on core modules
         run: >-
@@ -55,6 +57,7 @@ jobs:
           src/agentforge/pipeline/forge_pipeline.py
           src/agentforge/cli_quality.py
           src/agentforge/analysis/skill_check.py
+          src/agentforge/telemetry/
           src/agentforge/web/auth.py
 
       - name: Build package

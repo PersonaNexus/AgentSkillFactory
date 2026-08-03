@@ -38,7 +38,8 @@ Authorization: Bearer <token>
 
 - Never commit API keys, tokens, or `.env` files.
 - Job descriptions may contain PII; prefer `--anonymize` / anonymize pipeline stage when sharing outputs.
-- Telemetry is **off by default** (see `docs/telemetry-design.md`).
+- Telemetry is **off by default**. Opt-in local mode writes stage timings only
+  (no JD/skill bodies, no network). See `docs/telemetry-design.md`.
 
 ## Scope
 
