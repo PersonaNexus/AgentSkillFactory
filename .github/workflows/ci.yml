@@ -53,7 +53,6 @@ jobs:
           tests/test_fixture_eval.py
           src/agentforge/eval/
           src/agentforge/telemetry/
-          src/agentforge/eval/
           src/agentforge/drill/propose.py
           src/agentforge/market/propose.py
 
@@ -65,6 +64,7 @@ jobs:
           src/agentforge/cli_quality.py
           src/agentforge/analysis/skill_check.py
           src/agentforge/telemetry/
+          src/agentforge/eval/
           src/agentforge/web/auth.py
 
       - name: Build package
