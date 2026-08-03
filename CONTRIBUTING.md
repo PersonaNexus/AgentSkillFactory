@@ -38,6 +38,14 @@ uv run mypy --follow-imports=skip --ignore-missing-imports \
 
 Do **not** commit API keys, tokens, or live JD content with PII. Prefer fixtures under `tests/fixtures/` and the sanitized [examples/senior-data-engineer](examples/senior-data-engineer/README.md) package.
 
+## Offline fixture eval
+
+CI runs generation + schema + quality gates on frozen extractions under `tests/fixtures/eval/` (no API keys):
+
+```bash
+uv run pytest -q tests/test_fixture_eval.py
+```
+
 ## Golden example
 
 After changing generation or quality tooling, keep the public example green:

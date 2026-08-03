@@ -20,7 +20,10 @@ Features that extend AgentForge from a one-shot forge into a closed-loop agent d
 | `agentforge department` | Multi-agent team synthesis from JD corpus | Shipped (Phase 1) |
 | `agentforge market` | JD-corpus trends + gap analysis | Shipped (Phase 1) |
 | `agentforge wiki` | Personal wiki memory (entities, candidates, promote) | Shipped (MVP) |
-| Local telemetry | Opt-in JSONL pipeline stage timings | Shipped |
+| Local telemetry | Opt-in JSONL pipeline stage timings + llm_usage | Shipped |
+| `drill propose` / `market propose` | Deterministic day-2 plans | Shipped |
+| Fixture eval | Offline generation gates (no live LLM) | Shipped |
+| Release 0.2.0 | Public Alpha hardening tag | Shipped |
 | Web UI + REST + MCP | Optional extras | Shipped |
 
 ## Next (prioritized)

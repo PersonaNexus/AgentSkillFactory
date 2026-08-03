@@ -50,7 +50,10 @@ jobs:
           tests/test_telemetry.py
           tests/test_propose.py
           tests/test_llm_usage.py
+          tests/test_fixture_eval.py
+          src/agentforge/eval/
           src/agentforge/telemetry/
+          src/agentforge/eval/
           src/agentforge/drill/propose.py
           src/agentforge/market/propose.py
 

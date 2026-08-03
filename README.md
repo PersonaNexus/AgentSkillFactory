@@ -2,7 +2,7 @@
 
 > **Repo/Product map:** AgentForge is the product, Python package, and CLI (`agentforge`). The public GitHub repository is [`PersonaNexus/agentforge`](https://github.com/PersonaNexus/agentforge). It was formerly named `AgentSkillFactory`; GitHub redirects old links. See [docs/repo-product-map.md](docs/repo-product-map.md) for the ecosystem map and naming policy.
 
-Transform job descriptions, role descriptions, and operating context into deployable AI agent blueprints via [PersonaNexus](https://github.com/PersonaNexus/personanexus) — and keep them healthy after they ship.
+**v0.2.0** — Transform job descriptions, role descriptions, and operating context into deployable AI agent blueprints via [PersonaNexus](https://github.com/PersonaNexus/personanexus) — and keep them healthy after they ship.
 
 AgentForge reads a job description (txt, md, pdf, docx), extracts skills and role metadata with an LLM, maps them to [PersonaNexus](https://github.com/PersonaNexus/personanexus) personality traits, and outputs a ready-to-use agent identity — including Claude Code skill folders you can drop straight into `.claude/skills/`.
 
@@ -40,6 +40,28 @@ export ANTHROPIC_API_KEY=sk-ant-...
 # or
 export OPENAI_API_KEY=sk-...
 ```
+
+
+## Hero path (0.2.0)
+
+The shortest path from a job description to a deployable, checked skill:
+
+```bash
+pip install "agentforge[web]"   # or: uv sync --extra web
+export ANTHROPIC_API_KEY=sk-ant-...   # or OPENAI_API_KEY
+
+agentforge forge job_posting.txt -d ./out --skill-folder
+agentforge check ./out/*/SKILL.md --domain "your domain" --strict
+agentforge identity validate ./out/*.yaml
+
+# Optional day-2 once the agent is live:
+agentforge drill ingest ./out/<skill-folder>
+agentforge drill scan ./out/<skill-folder>
+agentforge drill propose ./out/<skill-folder>
+```
+
+Copy the skill folder into `.claude/skills/` (or your OpenClaw/PersonaNexus deploy path).
+See [examples/senior-data-engineer](examples/senior-data-engineer/README.md) for a sanitized golden package.
 
 ## Quick start
 

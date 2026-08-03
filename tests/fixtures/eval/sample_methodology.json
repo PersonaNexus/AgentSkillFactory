@@ -1,0 +1,29 @@
+{
+  "heuristics": [
+    {
+      "trigger": "When evaluating data pipeline performance",
+      "procedure": "1. Check throughput 2. Check latency 3. Compare baselines",
+      "source_responsibility": "Monitor pipeline performance"
+    }
+  ],
+  "output_templates": [
+    {
+      "name": "Pipeline Report",
+      "when_to_use": "After pipeline evaluation",
+      "template": "# Pipeline Report\n## Throughput\n## Latency"
+    }
+  ],
+  "trigger_mappings": [
+    {
+      "trigger_pattern": "Evaluate pipeline",
+      "technique": "Use throughput and latency metrics",
+      "output_format": "Markdown table"
+    }
+  ],
+  "quality_criteria": [
+    {
+      "criterion": "Includes quantified metrics",
+      "description": "All findings should include measurable data"
+    }
+  ]
+}
