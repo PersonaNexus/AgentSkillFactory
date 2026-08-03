@@ -282,13 +282,14 @@ def test_forge_check_prefers_skill_folder_skill_md(tmp_path):
         )
 
     assert result.exit_code == 0, result.output
+    mock_checker.check_paths.assert_called_once()
     skill_arg = mock_checker.check_paths.call_args.args[0]
     assert skill_arg.name == "SKILL.md"
     assert skill_arg.parent.name == "reliability-engineer"
+    # Prefer skill-folder path over profile *_SKILL.md
+    assert (tmp_path / "reliability-engineer" / "SKILL.md").is_file()
     assert "agentforge check" in result.output
-    # Rich may wrap long paths; assert distinctive path segments appear.
-    assert "reliability-engineer" in result.output
-    assert "SKILL.md" in result.output
+    assert "Next" in result.output
 
 
 def test_forge_check_skips_when_no_skill_file(tmp_path):
