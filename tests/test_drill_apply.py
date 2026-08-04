@@ -107,3 +107,61 @@ def test_non_applyable_skipped(tmp_path: Path) -> None:
     out = apply_proposals(folder, report, confirm=True)
     assert out.results[0].status == "skipped"
     assert "split_body" not in APPLYABLE_ACTIONS
+
+
+def test_apply_proposals_rejects_skill_path_outside_root(tmp_path: Path) -> None:
+    root = tmp_path / "skills"
+    root.mkdir()
+    outside = _skill_with_tools(tmp_path, "Read, Bash", "Use Read only.")
+    original = (outside / "SKILL.md").read_text(encoding="utf-8")
+    report = ProposalReport(
+        skill_dir=str(root),
+        generated_at=datetime.now(UTC),
+        proposals=[
+            Proposal(
+                action="prune_tools",
+                priority="high",
+                skill=str(outside),
+                title="Prune outside root",
+                rationale="crafted proposal",
+            ),
+            Proposal(
+                action="prune_tools",
+                priority="high",
+                skill="../my-skill",
+                title="Traverse outside root",
+                rationale="crafted proposal",
+            ),
+        ],
+    )
+
+    out = apply_proposals(root, report, confirm=True)
+
+    assert [result.status for result in out.results] == ["failed", "failed"]
+    assert (outside / "SKILL.md").read_text(encoding="utf-8") == original
+
+
+def test_apply_proposals_rejects_symlinked_skill_outside_root(tmp_path: Path) -> None:
+    root = tmp_path / "skills"
+    root.mkdir()
+    outside = _skill_with_tools(tmp_path, "Read, Bash", "Use Read only.")
+    (root / "linked-skill").symlink_to(outside, target_is_directory=True)
+    original = (outside / "SKILL.md").read_text(encoding="utf-8")
+    report = ProposalReport(
+        skill_dir=str(root),
+        generated_at=datetime.now(UTC),
+        proposals=[
+            Proposal(
+                action="prune_tools",
+                priority="high",
+                skill="linked-skill",
+                title="Prune symlinked skill",
+                rationale="crafted proposal",
+            ),
+        ],
+    )
+
+    out = apply_proposals(root, report, confirm=True)
+
+    assert out.results[0].status == "failed"
+    assert (outside / "SKILL.md").read_text(encoding="utf-8") == original
