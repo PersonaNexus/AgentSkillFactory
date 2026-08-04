@@ -74,18 +74,34 @@ def latest_propose_json(skill_dir: Path) -> Path | None:
 
 def _skill_folder(skill_dir: Path, slug: str | None) -> Path | None:
     """Resolve a skill folder path under *skill_dir* (single or parent layout)."""
+    skill_dir = skill_dir.resolve()
+
+    def confined(folder: Path) -> Path | None:
+        """Return the resolved folder only when it stays below skill_dir."""
+        resolved = folder.resolve()
+        try:
+            resolved.relative_to(skill_dir)
+        except ValueError:
+            return None
+        return resolved
+
     # Single-skill layout: SKILL.md lives at the root.
     if (skill_dir / "SKILL.md").is_file():
         return skill_dir
     if slug is None:
-        folders = discover_skill_folders(skill_dir)
+        folders = [
+            resolved
+            for folder in discover_skill_folders(skill_dir)
+            if (resolved := confined(folder)) is not None
+        ]
         return folders[0] if len(folders) == 1 else None
-    candidate = skill_dir / slug
-    if candidate.is_dir():
+    candidate = confined(skill_dir / slug)
+    if candidate is not None and candidate.is_dir():
         return candidate
     for folder in discover_skill_folders(skill_dir):
-        if folder.name == slug:
-            return folder
+        resolved = confined(folder)
+        if resolved is not None and folder.name == slug:
+            return resolved
     return None
 
 
