@@ -305,6 +305,21 @@ def apply_proposals(
             ))
             continue
 
+        # Resolve and confine the proposal target before asking the operator to
+        # approve it.  A confirmation prompt must never lend legitimacy to a
+        # crafted path that would later be rejected (traversal, absolute paths,
+        # or symlinks escaping the skill root).
+        folder = _skill_folder(skill_dir, proposal.skill)
+        if folder is None:
+            results.append(ApplyResult(
+                action=proposal.action,
+                skill=proposal.skill,
+                title=proposal.title,
+                status="failed",
+                detail=f"could not resolve skill folder for {proposal.skill!r}",
+            ))
+            continue
+
         if not confirm:
             if confirm_fn is None:
                 results.append(ApplyResult(
@@ -324,17 +339,6 @@ def apply_proposals(
                     detail="user declined",
                 ))
                 continue
-
-        folder = _skill_folder(skill_dir, proposal.skill)
-        if folder is None:
-            results.append(ApplyResult(
-                action=proposal.action,
-                skill=proposal.skill,
-                title=proposal.title,
-                status="failed",
-                detail=f"could not resolve skill folder for {proposal.skill!r}",
-            ))
-            continue
 
         applier = _APPLIERS[proposal.action]
         results.append(applier(folder))
