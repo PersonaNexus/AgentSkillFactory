@@ -165,3 +165,40 @@ def test_apply_proposals_rejects_symlinked_skill_outside_root(tmp_path: Path) ->
 
     assert out.results[0].status == "failed"
     assert (outside / "SKILL.md").read_text(encoding="utf-8") == original
+
+
+def test_apply_proposals_rejects_unsafe_targets_before_confirm(tmp_path: Path) -> None:
+    root = tmp_path / "skills"
+    root.mkdir()
+    outside = _skill_with_tools(tmp_path, "Read, Bash", "Use Read only.")
+    (root / "linked-skill").symlink_to(outside, target_is_directory=True)
+    prompts: list[str | None] = []
+    report = ProposalReport(
+        skill_dir=str(root),
+        generated_at=datetime.now(UTC),
+        proposals=[
+            Proposal(
+                action="prune_tools",
+                priority="high",
+                skill="../my-skill",
+                title="Traverse outside root",
+                rationale="crafted proposal",
+            ),
+            Proposal(
+                action="prune_tools",
+                priority="high",
+                skill="linked-skill",
+                title="Follow symlink outside root",
+                rationale="crafted proposal",
+            ),
+        ],
+    )
+
+    out = apply_proposals(
+        root,
+        report,
+        confirm_fn=lambda proposal: prompts.append(proposal.skill) or True,
+    )
+
+    assert prompts == []
+    assert [result.status for result in out.results] == ["failed", "failed"]
