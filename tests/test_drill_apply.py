@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import yaml
+
 from agentforge.drill.apply import (
     APPLYABLE_ACTIONS,
     apply_add_skill_md,
@@ -39,6 +41,40 @@ def test_prune_tools_removes_unused(tmp_path: Path) -> None:
     # Write and Bash should be gone if not in body
     assert "Read" in text
     assert "Grep" in text
+
+
+def test_prune_tools_round_trips_typed_frontmatter(tmp_path: Path) -> None:
+    folder = tmp_path / "typed-skill"
+    folder.mkdir()
+    original_frontmatter = {
+        "name": "typed-skill",
+        "description": "value: with # syntax and \"quotes\"",
+        "tags": ["one", "two: three", None, False],
+        "metadata": {
+            "enabled": True,
+            "retries": 0,
+            "optional": None,
+            "escaped": "line one\nline two\\tail",
+        },
+        "allowed-tools": ["Read", "Write"],
+    }
+    skill_md = (
+        "---\n"
+        + yaml.safe_dump(original_frontmatter, sort_keys=False)
+        + "---\n\n# Typed Skill\n\nUse Read to inspect files.\n"
+    )
+    (folder / "SKILL.md").write_text(skill_md, encoding="utf-8")
+
+    result = apply_prune_tools(folder)
+
+    assert result.status == "applied"
+    rewritten = (folder / "SKILL.md").read_text(encoding="utf-8")
+    frontmatter = yaml.safe_load(rewritten.split("---", 2)[1])
+    assert frontmatter == {
+        **original_frontmatter,
+        "allowed-tools": "Read",
+    }
+    assert rewritten.endswith("# Typed Skill\n\nUse Read to inspect files.\n")
 
 
 def test_add_skill_md_creates_stub(tmp_path: Path) -> None:
