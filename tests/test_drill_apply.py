@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import yaml
+
 from agentforge.drill.apply import (
     APPLYABLE_ACTIONS,
     apply_add_skill_md,
@@ -39,6 +41,40 @@ def test_prune_tools_removes_unused(tmp_path: Path) -> None:
     # Write and Bash should be gone if not in body
     assert "Read" in text
     assert "Grep" in text
+
+
+def test_prune_tools_preserves_frontmatter_yaml_types_and_escaping(tmp_path: Path) -> None:
+    folder = tmp_path / "typed-skill"
+    folder.mkdir()
+    (folder / "SKILL.md").write_text(
+        "---\n"
+        "name: typed-skill\n"
+        "description: 'Handles values: safely # even with punctuation'\n"
+        "enabled: true\n"
+        "retries: 3\n"
+        "metadata:\n"
+        "  owner: 'ops:platform'\n"
+        "  labels: [alpha, beta]\n"
+        "allowed_tools: [Read, Bash]\n"
+        "---\n\n"
+        "# Typed Skill\n\nUse Read only.\n",
+        encoding="utf-8",
+    )
+
+    result = apply_prune_tools(folder)
+
+    assert result.status == "applied"
+    text = (folder / "SKILL.md").read_text(encoding="utf-8")
+    frontmatter = yaml.safe_load(text.split("---", 2)[1])
+    assert frontmatter == {
+        "name": "typed-skill",
+        "description": "Handles values: safely # even with punctuation",
+        "enabled": True,
+        "retries": 3,
+        "metadata": {"owner": "ops:platform", "labels": ["alpha", "beta"]},
+        "allowed-tools": "Read",
+    }
+    assert text.endswith("# Typed Skill\n\nUse Read only.\n")
 
 
 def test_add_skill_md_creates_stub(tmp_path: Path) -> None:

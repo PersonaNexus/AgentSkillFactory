@@ -19,6 +19,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
+import yaml
 from pydantic import BaseModel, Field
 
 from agentforge.day2.frontmatter import split_frontmatter
@@ -108,30 +109,18 @@ def _skill_folder(skill_dir: Path, slug: str | None) -> Path | None:
 def _rewrite_allowed_tools(skill_md: str, keep: list[str]) -> str:
     """Replace allowed-tools frontmatter with *keep* list."""
     fm, body, _notes = split_frontmatter(skill_md)
+    fm.pop("allowed-tools", None)
+    fm.pop("allowed_tools", None)
     if keep:
         fm["allowed-tools"] = ", ".join(keep)
-    else:
-        fm.pop("allowed-tools", None)
-        fm.pop("allowed_tools", None)
-    # rebuild simple YAML frontmatter
-    lines = ["---"]
-    for key, value in fm.items():
-        if key in ("allowed-tools", "allowed_tools"):
-            continue
-        if isinstance(value, list):
-            lines.append(f"{key}: {', '.join(str(v) for v in value)}")
-        else:
-            # quote multi-line / special
-            text = str(value).replace("\n", " ").strip()
-            if ":" in text or text.startswith(("#", "{", "[")):
-                lines.append(f'{key}: "{text}"')
-            else:
-                lines.append(f"{key}: {text}")
-    if keep:
-        lines.append(f"allowed-tools: {', '.join(keep)}")
-    lines.append("---")
-    lines.append("")
-    return "\n".join(lines) + body.lstrip("\n")
+
+    rendered = yaml.safe_dump(
+        fm,
+        allow_unicode=True,
+        default_flow_style=False,
+        sort_keys=False,
+    ).rstrip()
+    return f"---\n{rendered}\n---\n\n{body.lstrip(chr(10))}"
 
 
 def apply_prune_tools(skill_folder: Path) -> ApplyResult:
